@@ -1,0 +1,23 @@
+{
+  "model": "ResNet18",
+  "dataset": "Cifar10",
+  "load": "None",
+  "logdir": "log",
+  "gpu": "1",
+  "activation": "relu",
+  "regularizer": {
+    "name": "Ridge",
+    "lmd": "0.0002"
+  },
+  "quantizer": {
+    "name": "linear",
+    "midtread": "True",
+    "BITW": "32",
+    "BITA": "32",
+    "BITG": "32"
+  }
+  "optimizer": {
+    "name": "Momentum",
+    "lr": "0.01"
+  }
+}
