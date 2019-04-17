@@ -24,6 +24,7 @@ from quantization.quantizers import quantize_weight, quantize_activation, quanti
 class Model(ModelDesc):
     def __init__(self, config={}, size=32):
         self.size = size
+        self.initializer_config = config['initializer']
         self.regularizer_config = config['regularizer']
         self.optimizer_config = config['optimizer']
         self.activation = get_activation_func(config['activation'])
@@ -89,7 +90,8 @@ class Model(ModelDesc):
         with remap_variables(new_get_variable), \
                 argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
                 argscope(Conv2D, use_bias=False, nl=tf.identity,
-                         kernel_initializer=tf.variance_scaling_initializer(scale=2.0, mode='fan_in')):
+                         kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['sclae']),
+                                                                            mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
                       .Conv2D('conv1', 16, 3)   # size=32
                       .BatchNorm('bn1')

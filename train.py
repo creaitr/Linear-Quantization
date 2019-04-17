@@ -64,6 +64,8 @@ if __name__ == '__main__':
         logger.auto_set_dir()
     else:
         logger.set_logger_dir('train_log/' + config['logdir'], action='d')
+    with open(logger.get_logger_dir() + '/config.json', 'w') as outfile:
+        json.dump(config, outfile)
 
     # get train config
     train_config = get_train_config(config)

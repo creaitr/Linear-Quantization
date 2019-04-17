@@ -90,10 +90,6 @@ ENV/
 env.bak/
 venv.bak/
 
-# Result of execution
-train_log/
-trained_log/
-
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -106,3 +102,11 @@ trained_log/
 
 # mypy
 .mypy_cache/
+
+# Result of execution
+train_log/
+trained_log/
+
+# Pycharm files
+.DS_Store
+.idea

@@ -1,1 +1,1 @@
-from ResNet.ResNet18 import ResNet18
+from ResNet18 import Model as ResNet18
