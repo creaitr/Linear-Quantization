@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-def get_activation_funcs(name):
+def get_activation_func(name):
     if name == 'relu':
         return tf.nn.relu
     elif name == 'relu1':

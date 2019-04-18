@@ -19,7 +19,7 @@
     "BITW": "32",
     "BITA": "32",
     "BITG": "32"
-  }
+  },
   "optimizer": {
     "name": "Momentum",
     "lr": "0.01"

@@ -14,18 +14,18 @@ def partial_clip(x, start, end):
 
 
 def Weighted_Ridge1(x):
-    end = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+    end = tf.reduce_max(tf.abs(x))
     start = tf.multiply(end, (3 / 7))
     weighted = tf.multiply(start, partial_clip(x, start, end))
-    weighted = tf.multiply(0.5, weighted)
+    weighted = tf.multiply(0.25, weighted)
     return tf.add(Ridge(x), weighted, name='weighted_ridge1')
 
 
 def Weighted_Ridge2(x):
-    end = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+    end = tf.reduce_max(tf.abs(x))
     start = tf.multiply(end, (3 / 7))
     weighted = partial_clip(x, start, end)
     weighted = tf.multiply(-(3 / 8), tf.square(weighted - end))
     weighted = tf.multiply(start, weighted)
-    weighted = tf.multiply(0.5, weighted)
+    weighted = tf.multiply(0.25, weighted)
     return tf.add(Ridge(x), weighted, name='weighted_ridge2')

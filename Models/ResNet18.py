@@ -16,10 +16,11 @@ from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
 from tensorpack.utils import logger
 
 # custom
-from regularization import regularizers
-from optimization.optimizers import get_optimizer
-from activation.activation_funcs import get_activation_func
-from quantization.quantizers import quantize_weight, quantize_activation, quantize_gradient
+from .regularization import regularizers
+from .optimization.optimizers import get_optimizer
+from .activation.activation_funcs import get_activation_func
+from .quantization.quantizers import quantize_weight, quantize_activation, quantize_gradient
+
 
 class Model(ModelDesc):
     def __init__(self, config={}, size=32):
@@ -90,7 +91,7 @@ class Model(ModelDesc):
         with remap_variables(new_get_variable), \
                 argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
                 argscope(Conv2D, use_bias=False, nl=tf.identity,
-                         kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['sclae']),
+                         kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['scale']),
                                                                             mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
                       .Conv2D('conv1', 16, 3)   # size=32
@@ -133,9 +134,9 @@ class Model(ModelDesc):
         opt = get_optimizer(self.optimizer_config)
         return opt
 
-    def get_callbacks(ds_tst):
+    def get_callbacks(self, ds_tst):
         callbacks=[
-            ModelSaver(max_to_keep=1, checkpoint_dir=logger.get_logger_dir()+'/last_epoch'),
+            ModelSaver(max_to_keep=1),
             InferenceRunner(ds_tst,
                             [ScalarStats('cross_entropy_loss'),
                              ClassificationError('err_top1', summary_name='validation_error_top1'),

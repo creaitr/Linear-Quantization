@@ -19,7 +19,7 @@ from tensorpack.tfutils import DictRestore
 from tensorpack.train import TrainConfig
 from tensorpack.train import SimpleTrainer
 from tensorpack.train import SyncMultiGPUTrainer
-from tensorpack.train import AnsyncMultiGPUTrainer
+from tensorpack.train import AsyncMultiGPUTrainer
 from tensorpack.train import launch_train_with_config
 
 # custom
@@ -28,7 +28,7 @@ import Models
 
 
 def get_train_config(config):
-    size, ds_trn, ds_tst = getattr(Dataset, config['dataset']).load_data()
+    size, ds_trn, ds_tst = getattr(Dataset, config['dataset'])().load_data()
 
     model = getattr(Models, config['model'])(config, size)
 
@@ -38,7 +38,7 @@ def get_train_config(config):
                                dataflow=ds_trn,
                                callbacks=callbacks,
                                max_epoch=max_epoch,
-                               session_init=DictRestore(dict(np.load(config['load']))) if config['load'] is not 'None' else None
+                               session_init=DictRestore(dict(np.load(config['load']))) if config['load'] != 'None' else None
                                )
     return train_config
 
