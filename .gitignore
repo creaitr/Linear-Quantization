@@ -108,5 +108,5 @@ train_log/
 trained_log/
 
 # Pycharm files
-.DS_Store
-.idea
+.DS_Store/
+.idea/
