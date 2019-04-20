@@ -100,3 +100,4 @@ def ternarize(x, thresh=0.05):
 
     tf.summary.histogram(w.name, w)
     return w
+

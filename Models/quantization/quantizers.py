@@ -31,29 +31,22 @@ def quantize_weight(name, bitW, midtread):
             if bitW == 32:
                 return x
 
-            if midtread:
-                x = tf.tanh(x)
-                x = x / tf.reduce_max(tf.abs(x)) * 0.5 + 0.5
-                x = 2 * quantize_midtread(x, bitW) - 1
-                '''
-                assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
-                max_val = tf.reduce_max(tf.abs(x))
-                x = x / max_val
-                x = quantize_midtread(x, bitW - 1)
-                w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
-                x = tf.multiply(x, w_s)
-                '''
-                return x
-            else:
-                max_val = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
-                x = x / max_val
-                x = quantize_midrise(x, bitW - 1) * max_val
-                return x
+             max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+             x = x / max_x
 
+            if midtread:
+                assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
+                x = quantize_midtread(x, bitW - 1)
+            else:	# midrise
+                x = quantize_midrise(x, bitW - 1)
+
+            w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
+            return tf.multiply(w_s, x)
         return qw
 
     elif name == 'nonlinear':
         return None
+
 
 def quantize_activation(bitA):
     def qa(x):
@@ -61,6 +54,7 @@ def quantize_activation(bitA):
             return x
         return quantize_midtread(x, bitA)
     return qa
+
 
 def quantize_gradient(bitG):
     def qg(x):

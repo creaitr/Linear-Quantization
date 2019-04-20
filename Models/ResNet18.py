@@ -36,6 +36,7 @@ class Model(ModelDesc):
                 tf.TensorSpec([None], tf.int32, 'label')]
 
     def build_graph(self, image, label):
+        '''
         # get quantization function
         qw = quantize_weight(self.quantizer_config['name'], int(self.quantizer_config['BITW']),
                              eval(self.quantizer_config['midtread']))
@@ -43,7 +44,13 @@ class Model(ModelDesc):
             qa = self.activation
         else:
             qa = quantize_activation(int(self.quantizer_config['BITA']))
-        qd = quantize_gradient(int(self.quantizer_config['BITG']))
+        qg = quantize_gradient(int(self.quantizer_config['BITG']))
+        '''
+        from .quantization.dorefa import get_dorefa
+        bitW = int(self.quantizer_config['BITW'])
+        bitA = int(self.quantizer_config['BITA'])
+        bitG = int(self.quantizer_config['BITG'])
+        qw, qa, qg = get_dorefa(bitW, bitA, bitG); print(bitW); print(bitA); print(bitG)
 
         def new_get_variable(v):
             name = v.op.name
@@ -55,7 +62,7 @@ class Model(ModelDesc):
                 return qw(v)
 
         def activate(x):
-            return qa(x)
+            return qa(self.activation(x))
 
         def resblock(x, channel, stride):
             def get_stem_full(x):
