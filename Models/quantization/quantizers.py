@@ -31,13 +31,13 @@ def quantize_weight(name, bitW, midtread):
             if bitW == 32:
                 return x
 
-             max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
-             x = x / max_x
+            max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+            x = x / max_x
 
             if midtread:
                 assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
                 x = quantize_midtread(x, bitW - 1)
-            else:	# midrise
+            else:   # midrise
                 x = quantize_midrise(x, bitW - 1)
 
             w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
