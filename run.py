@@ -1,17 +1,5 @@
 import os
 
-
-lmd_list = [0.00001, 0.0001, 0.0002, 0.001, 0.01, 0.1]
-
-str1 = 'python train.py logdir=Ridge_{0} regularizer\\lmd={0}'
-for i in lmd_list:
-	r = os.system(str1.format(i))
-
-str2 = 'python train.py logdir=Weighted_Ridge1_{0} regularizer\\name=Weighted_Ridge1 regularizer\lmd={0}'
-for i in lmd_list:
-	r = os.system(str2.format(i))
-
-str3 = 'python train.py logdir=Weighted_Ridge2_{0} regularizer\\name=Weighted_Ridge2 regularizer\lmd={0}'
-for i in lmd_list:
-	r = os.system(str3.format(i))
-
+#str1 = 'python train.py logdir=Weighted_Ridge2_0.0002 regularizer:name=Weighted_Ridge2'
+str1 = 'python train.py logdir=QnnBase8W initializer:scale=1.0 activation=relu1 regularizer:name=None quantizer:BITW=16 quantizer:BITA=32'
+r = os.system(str1)

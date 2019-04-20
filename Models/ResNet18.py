@@ -110,9 +110,9 @@ class Model(ModelDesc):
         cost = tf.reduce_mean(cost, name='cross_entropy_loss')
 
         # regularization
-        if self.regularizer_config['name'] is not 'None':
+        if self.regularizer_config['name'] != 'None':
             reg_func = getattr(regularizers, self.regularizer_config['name'])
-            reg_cost = tf.multiply(float(self.regularizer_config['lmd']), regularize_cost('.*/W', reg_func), name='reg_cost')
+            reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), regularize_cost('.*/W', reg_func), name='reg_cost')
             total_cost = tf.add_n([cost, reg_cost], name='total_cost')
         else:
             total_cost = cost

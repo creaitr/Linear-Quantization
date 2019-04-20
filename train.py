@@ -20,6 +20,8 @@ from tensorpack.train import TrainConfig
 from tensorpack.train import SimpleTrainer
 from tensorpack.train import SyncMultiGPUTrainer
 from tensorpack.train import AsyncMultiGPUTrainer
+from tensorpack.train import SyncMultiGPUTrainerReplicated
+from tensorpack.train import SyncMultiGPUTrainerParameterServer
 from tensorpack.train import launch_train_with_config
 
 # custom
@@ -49,10 +51,10 @@ if __name__ == '__main__':
 
     for i in range(1, len(sys.argv)):
         keys, value = sys.argv[i].split('=')
-        if '\\' not in keys:
+        if ':' not in keys:
             config[keys] = value
         else:
-            key1, key2 = keys.split('\\')
+            key1, key2 = keys.split(':')
             config[key1][key2] = value
 
     # set GPU machine
@@ -73,6 +75,6 @@ if __name__ == '__main__':
     # train the model
     num_gpu = max(get_num_gpu(), 1)
     if num_gpu > 1:
-        launch_train_with_config(train_config, SyncMultiGPUTrainer(num_gpu))
+        launch_train_with_config(train_config, SyncMultiGPUTrainerReplicated(num_gpu, mode='nccl'))
     else:
         launch_train_with_config(train_config, SimpleTrainer())

@@ -11,7 +11,7 @@
   "activation": "relu",
   "regularizer": {
     "name": "Ridge",
-    "lmd": "0.0002"
+    "lmbd": "0.0002"
   },
   "quantizer": {
     "name": "linear",
