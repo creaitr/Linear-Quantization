@@ -1,69 +1,50 @@
+# -*- coding: utf-8 -*-
+# File: dorefa.py
+# Author: Yuxin Wu
 
-# This source code is inspired by Yuxin Wu's repo(tensorpack/expamples/dorefanet.py)
 import tensorflow as tf
 
 from tensorpack.utils.argtools import graph_memoized
 
 
-def quantize_midtread(x, k):
-    n = float(2 ** k - 1)
+@graph_memoized
+def get_dorefa(bitW, bitA, bitG):
+    """
+    Return the three quantization functions fw, fa, fg, for weights, activations and gradients respectively
+    It's unsafe to call this function multiple times with different parameters
+    """
+    def quantize(x, k):
+        n = float(2 ** k - 1)
 
-    @tf.custom_gradient
-    def _quantize_midtread(x):
-        return tf.round(x * n) / n, lambda dy: dy
+        @tf.custom_gradient
+        def _quantize(x):
+            return tf.round(x * n) / n, lambda dy: dy
 
-    return _quantize_midtread(x)
+        return _quantize(x)
 
+    def fw(x):
+        if bitW == 32:
+            return x
 
-def quantize_midrise(x, k):
-    n = float(2 ** k - 0.5)
+        if bitW == 1:   # BWN
+            E = tf.stop_gradient(tf.reduce_mean(tf.abs(x)))
 
-    @tf.custom_gradient
-    def _quantize_midrise(x):
-        return (tf.floor(x * n) + 0.5) / n, lambda dy: dy
+            @tf.custom_gradient
+            def _sign(x):
+                return tf.where(tf.equal(x, 0), tf.ones_like(x), tf.sign(x / E)) * E, lambda dy: dy
 
-    return _quantize_midrise(x)
+            return _sign(x)
 
+        x = tf.tanh(x)
+        x = x / tf.reduce_max(tf.abs(x)) * 0.5 + 0.5
+        return 2 * quantize(x, bitW) - 1
 
-def quantize_weight(name, bitW, midtread):
-    if name == 'linear':
-        def qw(x):
-            if bitW == 32:
-                return x
-
-            if midtread:
-                x = tf.tanh(x)
-                x = x / tf.reduce_max(tf.abs(x)) * 0.5 + 0.5
-                x = 2 * quantize_midtread(x, bitW) - 1
-                '''
-                assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
-                max_val = tf.reduce_max(tf.abs(x))
-                x = x / max_val
-                x = quantize_midtread(x, bitW - 1)
-                w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
-                x = tf.multiply(x, w_s)
-                '''
-                return x
-            else:
-                max_val = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
-                x = x / max_val
-                x = quantize_midrise(x, bitW - 1) * max_val
-                return x
-
-        return qw
-
-    elif name == 'nonlinear':
-        return None
-
-def quantize_activation(bitA):
-    def qa(x):
+    def fa(x):
         if bitA == 32:
             return x
-        return quantize_midtread(x, bitA)
-    return qa
+        return quantize(x, bitA)
 
-def quantize_gradient(bitG):
-    def qg(x):
+    def fg(x):
         if bitG == 32:
             return x
 
@@ -78,11 +59,13 @@ def quantize_gradient(bitG):
                 x = x * 0.5 + 0.5 + tf.random_uniform(
                     tf.shape(x), minval=-0.5 / n, maxval=0.5 / n)
                 x = tf.clip_by_value(x, 0.0, 1.0)
-                x = quantize_midtread(x, bitG) - 0.5
+                x = quantize(x, bitG) - 0.5
                 return x * maxx * 2
+
             return input, grad_fg
+
         return _identity(x)
-    return qg
+    return fw, fa, fg
 
 
 def ternarize(x, thresh=0.05):
