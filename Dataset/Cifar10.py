@@ -18,7 +18,7 @@ class Cifar10:
 
     def get_data(self, train_or_test):
         isTrain = train_or_test == 'train'
-        ds = dataset.Cifar10(train_or_test)
+        ds = dataset.Cifar10(train_or_test, dir='.')
         pp_mean = ds.get_per_pixel_mean()
         if isTrain:
             augmentors = [
