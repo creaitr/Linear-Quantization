@@ -51,11 +51,11 @@ if __name__ == '__main__':
 
     for i in range(1, len(sys.argv)):
         keys, value = sys.argv[i].split('=')
-        if ':' not in keys:
-            config[keys] = value
-        else:
-            key1, key2 = keys.split(':')
-            config[key1][key2] = value
+        keys = keys.split(':')
+        temp = config
+        for i in range(len(keys) - 1):
+            temp = temp[keys[i]]
+        temp[keys[-1]] = value
 
     # set GPU machine
     if config['gpu'] is not 'None':

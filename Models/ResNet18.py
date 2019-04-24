@@ -20,6 +20,7 @@ from .regularization import regularizers
 from .optimization.optimizers import get_optimizer
 from .activation.activation_funcs import get_activation_func
 from .quantization.quantizers import quantize_weight, quantize_activation, quantize_gradient
+import callbacks
 
 
 class Model(ModelDesc):
@@ -36,21 +37,14 @@ class Model(ModelDesc):
                 tf.TensorSpec([None], tf.int32, 'label')]
 
     def build_graph(self, image, label):
-        '''
         # get quantization function
         qw = quantize_weight(self.quantizer_config['name'], int(self.quantizer_config['BITW']),
-                             eval(self.quantizer_config['midtread']))
+                             eval(self.quantizer_config['W_options']['is_Lv']))
         if self.quantizer_config['BITW'] == '32':
             qa = self.activation
         else:
             qa = quantize_activation(int(self.quantizer_config['BITA']))
         qg = quantize_gradient(int(self.quantizer_config['BITG']))
-        '''
-        from .quantization.dorefa import get_dorefa
-        bitW = int(self.quantizer_config['BITW'])
-        bitA = int(self.quantizer_config['BITA'])
-        bitG = int(self.quantizer_config['BITG'])
-        qw, qa, qg = get_dorefa(bitW, bitA, bitG); print(bitW); print(bitA); print(bitG)
 
         def new_get_variable(v):
             name = v.op.name
@@ -150,7 +144,9 @@ class Model(ModelDesc):
                              ClassificationError('err_top5', summary_name='validation_error_top5')]),
             MinSaver('validation_error_top1'),
             ScheduledHyperParamSetter('learning_rate',
-                                      [(1, 0.1), (82, 0.01), (123, 0.001), (300, 0.0002)])
+                                      [(1, 0.1), (82, 0.01), (123, 0.001), (300, 0.0002)]),
+            callbacks.CkptModifier('min-validation_error_top1'),
+            callbacks.NpzConverter()
         ]
         max_epoch = 200
         return callbacks, max_epoch

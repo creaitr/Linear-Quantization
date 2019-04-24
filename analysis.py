@@ -43,7 +43,7 @@ if __name__ == '__main__':
     for logdir in os.listdir(path):
         logdir = path + '/' + logdir
 
-
+        
         # find best result info        
         find_min_error_epoch(logdir)
         
@@ -56,7 +56,7 @@ if __name__ == '__main__':
                 meta_file = file
                 break
         # 3. dump ckpt to npz
-        dump_py = 'utils/dump-model-params.py'
+        dump_py = 'scripts/dump-model-params.py'
         ckpt_file = logdir + '/' + ckpt_file
         meta_file = logdir + '/' + meta_file
         outfile = logdir + '/' + 'best.npz'
@@ -72,7 +72,7 @@ if __name__ == '__main__':
             if 'W:0' in key:
                 x = dic[key].flatten()
                 max_val = np.amax(np.absolute(x))
-                mid_val = max_val * (3/7)
+                mid_val = max_val * 0.5
 
                 x_abs = np.absolute(x)
                 cnt1 = 0; cnt2 = 0

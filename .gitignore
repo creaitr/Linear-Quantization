@@ -106,6 +106,7 @@ venv.bak/
 # Result of execution
 train_log/
 trained_log/
+temp/
 
 # Pycharm files
 .DS_Store/

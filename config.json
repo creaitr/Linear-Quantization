@@ -11,17 +11,26 @@
   "activation": "relu",
   "regularizer": {
     "name": "Ridge",
-    "lmbd": "0.0002"
+    "lmbd": "0.0002",
+    "sub_ratio": "0.05"
   },
   "quantizer": {
     "name": "linear",
-    "midtread": "True",
     "BITW": "32",
+    "W_options": {
+      "is_Lv": "False",
+      "is_2Lv": "False",
+      "2Lv_ratio": "2,2"
+    },
     "BITA": "32",
     "BITG": "32"
   },
   "optimizer": {
     "name": "Momentum",
     "lr": "0.01"
+  },
+  "retrain": {
+    "fix_max": true,
+    "lr_schedule": 0.01
   }
 }
