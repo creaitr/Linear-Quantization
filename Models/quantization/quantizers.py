@@ -3,6 +3,7 @@
 import tensorflow as tf
 
 from tensorpack.utils.argtools import graph_memoized
+#from tensorpack.callbacks.base import Callback
 
 
 def quantize_midtread(x, k):
@@ -24,28 +25,78 @@ def quantize_midrise(x, k):
 
     return _quantize_midrise(x)
 
+'''
+class GlobalStep(Callback):
+    def get_global_step(self):
+        return self.trainer.global_step
+'''
 
-def quantize_weight(name, bitW, midtread):
+
+def quantize_weight(bitW, name, opts):
+    # 1. Linear Quantization
     if name == 'linear':
-        def qw(x):
-            if bitW == 32:
-                return x
+        # 1-Level Quantization
+        if eval(opts['centralized']) == False:
+            def qw(x):
+                if bitW == 32:
+                    return x
 
-            max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
-            x = x / max_x
+                if eval(opts['fix_max']):
+                    param_name = x.op.name.split('/W')[0] + '/maxW'
+                    max_x = tf.stop_gradient(tf.get_variable(param_name))
+                    max_x *= float(opts['max_scale'])
+                else:
+                    max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+                x = x / max_x
 
-            if midtread:
-                assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
-                x = quantize_midtread(x, bitW - 1)
-            else:   # midrise
-                x = quantize_midrise(x, bitW - 1)
+                if eval(opts['is_Lv']): # midtread
+                    assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
+                    x = quantize_midtread(x, bitW - 1)
+                else:  # midrise
+                    x = quantize_midrise(x, bitW - 1)
 
-            w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
-            return tf.multiply(w_s, x)
-        return qw
+                w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
+                return tf.multiply(w_s + max_x, x)
+            return qw
 
-    elif name == 'nonlinear':
-        return None
+        # 2-Level Quantization (need mask tensor)
+        elif eval(opts['centralized']) == True:
+            '''
+            inBIT, exBIT = eval(opts['threshold_bit'])
+            ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
+
+            def qw(x):
+                if bitW == 32:
+                    return x
+
+                if eval(opts['fix_max']):
+                    param_name = x.op.name.split('/W')[0] + '/maxW'
+                    max_x = tf.stop_gradient(tf.get_variable(param_name))
+                    max_x *= float(opts['max_scale'])
+                else:
+                    max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+                x = x / max_x
+
+                threshold = max_x * ratio
+
+                if eval(opts['is_Lv']): # midtread
+                    assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
+                    x = quantize_midtread(x, bitW - 1)
+                else:  # midrise
+                    x = quantize_midrise(x, bitW - 1)
+
+                w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
+                return tf.multiply(w_s + max_x, x)
+            return qw
+            '''
+            return
+
+    # 2. Centroid Quantization
+    elif name == 'centroid':
+        return
+    # 3. Dynamic Network Surgery
+    elif name == 'dns':
+        return
 
 
 def quantize_activation(bitA):

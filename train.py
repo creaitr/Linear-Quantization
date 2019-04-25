@@ -27,30 +27,54 @@ from tensorpack.train import launch_train_with_config
 # custom
 import Dataset
 import Models
-
+import Utils
 
 def get_train_config(config):
+    # get dataset
     size, ds_trn, ds_tst = getattr(Dataset, config['dataset'])().load_data()
 
+    # get the model
     model = getattr(Models, config['model'])(config, size)
 
+    # get callbacks such as ModelSaver
     callbacks, max_epoch = model.get_callbacks(ds_tst)
 
+    # load pre-trained model
+    if config['load']['name'] in [None, 'None', '']:
+        session_init = None
+    else:
+        saved_model = dict(np.load(config['load']['name']))
+        if eval(config['load']['find_max']):
+            saved_model = Utils.find_max(saved_model)
+        if eval(config['load']['make_mask']):
+            saved_model = Utils.make_mask(saved_model, eval(config['quantizer']['W_opts']['threshold_bit']))
+        if eval(config['load']['clustering']):
+            saved_model, cluster_idx_ls = Utils.clustering(saved_model, int(config['quantizer']['BITW']), eval(config['quantizer']['W_opts']['is_Lv']))
+            model.add_clustering_update(cluster_idx_ls)
+        session_init = DictRestore(saved_model)
+
+    # set a train configuration
     train_config = TrainConfig(model=model,
                                dataflow=ds_trn,
                                callbacks=callbacks,
                                max_epoch=max_epoch,
-                               session_init=DictRestore(dict(np.load(config['load']))) if config['load'] != 'None' else None
+                               session_init=session_init
                                )
     return train_config
 
 
 if __name__ == '__main__':
     # set config
-    config = json.load(open('config.json'))
+    if sys.argv[1] == 'config':
+        config_file = sys.argv[2]
+        argv = sys.argv[3::] if len(sys.argv) > 3 else []
+    else:
+        config_file = 'config.json'
+        argv = sys.argv[1::] if len(sys.argv) > 1 else []
+    config = json.load(open(config_file))
 
-    for i in range(1, len(sys.argv)):
-        keys, value = sys.argv[i].split('=')
+    for i in range(len(argv)):
+        keys, value = argv[i].split('=')
         keys = keys.split(':')
         temp = config
         for i in range(len(keys) - 1):
@@ -58,14 +82,19 @@ if __name__ == '__main__':
         temp[keys[-1]] = value
 
     # set GPU machine
-    if config['gpu'] is not 'None':
+    if config['gpu'] in [None, 'None', '']:
+        os.environ['CUDA_VISIBLE_DEVICES'] = ''
+        num_gpu = 0
+    else:
         os.environ['CUDA_VISIBLE_DEVICES'] = config['gpu']
+        num_gpu = max(get_num_gpu(), 1)
 
     # set log directory
-    if config['logdir'] == 'None':
+    if config['logdir'] in [None, 'None', '']:
         logger.auto_set_dir()
     else:
         logger.set_logger_dir('train_log/' + config['logdir'], action='d')
+    # save configuration
     with open(logger.get_logger_dir() + '/config.json', 'w') as outfile:
         json.dump(config, outfile)
 
@@ -73,7 +102,6 @@ if __name__ == '__main__':
     train_config = get_train_config(config)
 
     # train the model
-    num_gpu = max(get_num_gpu(), 1)
     if num_gpu > 1:
         launch_train_with_config(train_config, SyncMultiGPUTrainerReplicated(num_gpu, mode='nccl'))
     else:

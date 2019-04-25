@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 def get_optimizer(config):
     lr = tf.get_variable('learning_rate', initializer=float(config['lr']), trainable=False)
         

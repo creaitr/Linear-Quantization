@@ -1,36 +1,44 @@
 {
   "model": "ResNet18",
   "dataset": "Cifar10",
-  "load": "None",
   "logdir": "log",
   "gpu": "1",
+  "load": {
+    "name": null,
+    "find_max": false,
+    "make_mask": false,
+    "clustering": false
+  },
   "initializer": {
-    "scale": "2.0",
+    "scale": 2.0,
     "mode": "fan_in"
   },
   "activation": "relu",
   "regularizer": {
     "name": "Ridge",
-    "lmbd": "0.0002",
-    "sub_ratio": "0.05"
+    "lmbd": 0.0002,
+    "sub_reg": {
+      "relative_lmbd": 0.2,
+      "fix_max": true,
+      "sub_ratio": [2,2]
+    }
   },
   "quantizer": {
     "name": "linear",
-    "BITW": "32",
-    "W_options": {
-      "is_Lv": "False",
-      "is_2Lv": "False",
-      "2Lv_ratio": "2,2"
+    "BITW": 32,
+    "W_opts": {
+      "fix_max": false,
+      "max_scale": 1.0,
+      "is_Lv": false,
+      "centralized": false,
+      "threshold_bit": [2,2]
     },
-    "BITA": "32",
-    "BITG": "32"
+    "BITA": 32,
+    "BITG": 32
   },
   "optimizer": {
     "name": "Momentum",
-    "lr": "0.01"
-  },
-  "retrain": {
-    "fix_max": true,
-    "lr_schedule": 0.01
+    "lr": 0.01,
+    "lr_schedule": [[1, 0.1], [82, 0.01], [123, 0.001], [300, 0.0002]]
   }
 }
