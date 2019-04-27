@@ -22,8 +22,8 @@ from .regularization import regularizers
 from .optimization.optimizers import get_optimizer
 from .activation.activation_funcs import get_activation_func
 from .quantization.quantizers import quantize_weight, quantize_activation, quantize_gradient
-from callbacks import CkptModifier
-from callbacks import NpzConverter
+from .callbacks import CkptModifier
+from .callbacks import NpzConverter
 
 
 class Model(ModelDesc):
