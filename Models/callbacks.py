@@ -7,31 +7,32 @@ import tensorflow as tf
 from tensorpack.utils import logger
 from tensorpack.tfutils import varmanip
 from tensorpack.tfutils.common import get_op_tensor_name
+from tensorpack.callbacks.base import Callback
 
 
-class CkptModifier():
+class CkptModifier(Callback):
     def __init__(self, model_name):
         self.model_dir = logger.get_logger_dir()
         self.model_name = model_name
 
     def _after_train(self):
-        with open(self.model_dir + '/ckeckpoint', 'w') as outfile:
-            outfile.write('model_checkpoint_path: {}'.format(self.model_name))
-            outfile.write('all_model_checkpoint_paths: {}'.format(self.model_name))
+        with open(self.model_dir + '/checkpoint', 'w') as outfile:
+            outfile.write('model_checkpoint_path: \"{}\"'.format(self.model_name))
+            outfile.write('all_model_checkpoint_paths: \"{}\"'.format(self.model_name))
 
 
-class NpzConverter():
+class NpzConverter(Callback):
     def __init__(self):
         return
 
     def _after_train(self):
         model_dir = logger.get_logger_dir()
-        ckpt_file = model_dir + '/ckeckpoint'
+        ckpt_file = model_dir + '/checkpoint'
         out_file = model_dir.split('/')[-1] + '.npz'
         meta_file = None
         for file in os.listdir(model_dir):
             if '.meta' in file:
-                meta_file = file; break
+                meta_file = model_dir + '/' + file; break
 
         # this script does not need GPU
         os.environ['CUDA_VISIBLE_DEVICES'] = ''

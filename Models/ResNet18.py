@@ -175,9 +175,9 @@ class Model(ModelDesc):
         # scheduling learning rate
         if self.optimizer_config['lr_schedule'] not in [None, 'None']:
             if type(self.optimizer_config['lr_schedule']) == str:
-                callbacks += eval(self.optimizer_config['lr_schedule'])
+                callbacks += [ScheduledHyperParamSetter('learning_rate', eval(self.optimizer_config['lr_schedule']))]
             else:
-                callbacks += self.optimizer_config['lr_schedule']
+                callbacks += [ScheduledHyperParamSetter('learning_rate', self.optimizer_config['lr_schedule'])]
         else:
             callbacks += [ScheduledHyperParamSetter('learning_rate',
                                       [(1, 0.1), (82, 0.01), (123, 0.001), (300, 0.0002)])]

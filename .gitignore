@@ -108,6 +108,9 @@ train_log/
 trained_log/
 temp/
 
+# Cifa10 dataset folder
+cifar-10-batches-py/
+
 # Pycharm files
 .DS_Store/
 .idea/

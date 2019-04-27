@@ -5,9 +5,9 @@
   "gpu": "1",
   "load": {
     "name": null,
-    "find_max": false,
-    "make_mask": false,
-    "clustering": false
+    "find_max": "False",
+    "make_mask": "False",
+    "clustering": "False"
   },
   "initializer": {
     "scale": 2.0,
@@ -19,7 +19,7 @@
     "lmbd": 0.0002,
     "sub_reg": {
       "relative_lmbd": 0.2,
-      "fix_max": true,
+      "fix_max": "True",
       "sub_ratio": [2,2]
     }
   },
@@ -27,10 +27,10 @@
     "name": "linear",
     "BITW": 32,
     "W_opts": {
-      "fix_max": false,
+      "fix_max": "False",
       "max_scale": 1.0,
-      "is_Lv": false,
-      "centralized": false,
+      "is_Lv": "False",
+      "centralized": "False",
       "threshold_bit": [2,2]
     },
     "BITA": 32,
