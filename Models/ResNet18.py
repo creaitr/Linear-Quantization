@@ -137,6 +137,12 @@ class Model(ModelDesc):
             
         return total_cost
 
+    def add_centralizing_update(self):
+        def func(x):
+            print(x)
+
+        self.centralizing = func
+
     def add_clustering_update(self, n_ls):
         def func(x):
             cluster_mask_name = x.op.name.split('/W')[0] + '/cluster_maskW'
@@ -153,11 +159,23 @@ class Model(ModelDesc):
 
         self.clustering = func
 
+    def add_masking_update(self):
+        def func(x):
+            print(x)
+
+        self.masking = func
+
     def optimizer(self):
         opt = get_optimizer(self.optimizer_config)
 
-        if eval(self.load_config['clustering']):
+        if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['centralized']):
+            self.add_centralizing_update()
+            opt = PostProcessOptimizer(opt, self.centralizing)
+        if self.quantizer_config['name'] == 'cluster' and eval(self.load_config['clustering']):
             opt = optimizer.apply_grad_processors(opt, [gradproc.Mapgradient(self.clustering, '.*/W')])
+        if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['pruning']):
+            self.add_masking_update()
+            opt = optimizer.apply_grad_processors(opt, [gradproc.Mapgradient(self.masking, '.*/W')])
         return opt
 
     def get_callbacks(self, ds_tst):

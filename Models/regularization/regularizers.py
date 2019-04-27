@@ -39,7 +39,7 @@ class Weighted_Ridge1():
 
             weighted = tf.reduce_sum(clipped_Lasso(x, threshold, maxW) - threshold)
             weighted = tf.multiply((threshold * relative_lmbd), weighted)
-            return tf.add(Ridge(x), weighted, name='weighted_ridge1')
+            return tf.add(Ridge().get_func()(x), weighted, name='weighted_ridge1')
         return func
 
 
@@ -71,5 +71,5 @@ class Weighted_Ridge2():
             weighted = clipped_Lasso(x, threshold, maxW)
             weighted = tf.reduce_sum(reverse_Ridge(weighted, threshold, maxW) - threshold)
             weighted = tf.multiply((threshold * relative_lmbd), weighted)
-            return tf.add(Ridge(x), weighted, name='weighted_ridge2')
+            return tf.add(Ridge().get_func()(x), weighted, name='weighted_ridge2')
         return func

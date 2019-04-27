@@ -31,6 +31,7 @@
       "max_scale": 1.0,
       "is_Lv": "False",
       "centralized": "False",
+      "pruning": "True",
       "threshold_bit": [2,2]
     },
     "BITA": 32,

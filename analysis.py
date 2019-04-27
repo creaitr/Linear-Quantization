@@ -21,22 +21,6 @@ def make_ckpt(logdir='.', model_name='', ckpt_name=''):
         outfile.write(bytes('all_model_checkpoint_paths: \"{}\"{}'.format(model_name, end_char), 'utf-8'))
 
 
-def dump_to_npz():
-    return
-
-def add_Ws():
-    return
-
-def draw_dist():
-    return
-
-def dump_to_quantized_npz():
-    d = dict(np.load(infile))
-
-    np.savez_compressed(outfile, **d)
-    return
-    
-
 if __name__ == '__main__':
     path = './train_log'
     #path = './temp'
@@ -45,18 +29,18 @@ if __name__ == '__main__':
 
         
         # find best result info        
-        find_min_error_epoch(logdir)
+        #find_min_error_epoch(logdir)
         
         # 1. make checkpoint file
         ckpt_file = 'checkpoint'
-        make_ckpt(logdir, 'min-validation_error_top1', ckpt_file)
+        #make_ckpt(logdir, 'min-validation_error_top1', ckpt_file)
         # 2. finc meta file
         for file in os.listdir(logdir):
             if '.meta' in file:
                 meta_file = file
                 break
         # 3. dump ckpt to npz
-        dump_py = 'scripts/dump-model-params.py'
+        dump_py = 'Scripts/dump-model-params.py'
         ckpt_file = logdir + '/' + ckpt_file
         meta_file = logdir + '/' + meta_file
         outfile = logdir + '/' + 'best.npz'
