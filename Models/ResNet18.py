@@ -23,7 +23,7 @@ from .optimization.optimizers import get_optimizer
 from .activation.activation_funcs import get_activation_func
 from .quantization.quantizers import quantize_weight, quantize_activation, quantize_gradient
 from .callbacks import CkptModifier
-from .callbacks import NpzConverter
+from .callbacks import StatsChecker
 
 
 class Model(ModelDesc):
@@ -169,7 +169,7 @@ class Model(ModelDesc):
                              ClassificationError('err_top5', summary_name='validation_error_top5')]),
             MinSaver('validation_error_top1'),
             CkptModifier('min-validation_error_top1'),
-            NpzConverter()
+            StatsChecker()
         ]
 
         # scheduling learning rate

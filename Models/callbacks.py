@@ -21,6 +21,22 @@ class CkptModifier(Callback):
             outfile.write('all_model_checkpoint_paths: \"{}\"'.format(self.model_name))
 
 
+class StatsChecker(Callback):
+    def __init__(self):
+        self.model_dir = logger.get_logger_dir()
+
+    def _after_train(self):
+        with open(self.model_dir + '/stats.json') as file:
+            stats = json.load(file)
+
+        errors = [x['validation_error_top1'] for x in stats]
+        idx = errors.index(min(errors))
+
+        with open(self.model_dir + '/best.json', 'w') as outfile:
+            json.dump(stats[idx], outfile)
+
+
+'''
 class NpzConverter(Callback):
     def __init__(self):
         return
@@ -61,3 +77,4 @@ class NpzConverter(Callback):
 
         dic_to_dump = {k: v for k, v in six.iteritems(dic) if k in var_to_dump}
         varmanip.save_chkpt_vars(dic_to_dump, out_file)
+'''
