@@ -13,7 +13,6 @@ import tensorflow as tf
 from tensorpack import *
 from tensorpack.tfutils.varreplace import remap_variables
 from tensorpack.tfutils import optimizer, gradproc
-from tensorpack.tfutils.optimizer import PostProcessOptimizer
 from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
 from tensorpack.utils import logger
 
@@ -118,7 +117,7 @@ class Model(ModelDesc):
 
         # regularization
         if self.regularizer_config['name'] not in [None, 'None']:
-            reg_func = getattr(regularizers, self.regularizer_config['name']).get_func(self.regularizer_config)
+            reg_func = getattr(regularizers, self.regularizer_config['name'])().get_func(self.regularizer_config)
             reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), regularize_cost('.*/W', reg_func), name='reg_cost')
             total_cost = tf.add_n([cost, reg_cost], name='total_cost')
         else:
@@ -170,12 +169,12 @@ class Model(ModelDesc):
 
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['centralized']):
             self.add_centralizing_update()
-            opt = PostProcessOptimizer(opt, self.centralizing)
+            opt = optimizer.PostProcessOptimizer(opt, self.centralizing)
         if self.quantizer_config['name'] == 'cluster' and eval(self.load_config['clustering']):
-            opt = optimizer.apply_grad_processors(opt, [gradproc.Mapgradient(self.clustering, '.*/W')])
-        if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['pruning']):
+            opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.clustering, '.*/W')])
+        if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['pruning']):
             self.add_masking_update()
-            opt = optimizer.apply_grad_processors(opt, [gradproc.Mapgradient(self.masking, '.*/W')])
+            opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.masking, '.*/W')])
         return opt
 
     def get_callbacks(self, ds_tst):
@@ -200,5 +199,6 @@ class Model(ModelDesc):
             callbacks += [ScheduledHyperParamSetter('learning_rate',
                                       [(1, 0.1), (82, 0.01), (123, 0.001), (300, 0.0002)])]
 
-        max_epoch = 200
+
+        max_epoch = int(self.optimizer_config['max_epoch'])
         return callbacks, max_epoch

@@ -4,9 +4,9 @@ import numpy as np
 def find_max(dic={}):
     keys = list(dic.keys())
     for key in keys:
-        if '/W:' in key and 'conv1' not in key or 'fct' not in key:
+        if '/W:' in key and 'conv1' not in key and 'fct' not in key:
             name_scope, device = key.split('/W')
-            max_val_name = name_scope + '/maxW' + device
+            max_val_name = 'regularize_cost_internals/' + name_scope + '/maxW' + device
 
             if max_val_name not in keys:
                 max_val = np.amax(np.absolute(dic[key]))
@@ -20,7 +20,7 @@ def make_mask(dic={}, bits=[]):
 
     keys = list(dic.keys())
     for key in keys:
-        if '/W:' in key and 'conv1' not in key or 'fct' not in key:
+        if '/W:' in key and 'conv1' not in key and 'fct' not in key:
             name_scpoe, device = key.split('/W')
 
             max_val_name = name_scope + '/maxW' + device
@@ -38,7 +38,7 @@ def make_mask(dic={}, bits=[]):
 def clustering(dic={}, bitW=8, is_Lv=False):
     keys = list(dic.keys())
     for key in keys:
-        if '/W:' in key and 'conv1' not in key or 'fct' not in key:
+        if '/W:' in key and 'conv1' not in key and 'fct' not in key:
             name_scpoe, device = key.split('/W')
 
             max_val_name = name_scope + '/maxW' + device

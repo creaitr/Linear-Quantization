@@ -3,23 +3,6 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-def find_min_error_epoch(logdir='.'):
-    with open(logdir + '/stats.json') as file:
-        stats = json.load(file)
-
-    errors = [x['validation_error_top1'] for x in stats]
-    idx = errors.index(min(errors))
-
-    with open(logdir + '/best.json', 'w') as outfile:
-        json.dump(stats[idx], outfile)
-
-
-def make_ckpt(logdir='.', model_name='', ckpt_name=''):
-    with open(logdir + '/' + ckpt_name, 'wb') as outfile:
-        end_char = chr(0x0a)
-        outfile.write(bytes('model_checkpoint_path: \"{}\"{}'.format(model_name, end_char), 'utf-8'))
-        outfile.write(bytes('all_model_checkpoint_paths: \"{}\"{}'.format(model_name, end_char), 'utf-8'))
-
 
 if __name__ == '__main__':
     path = './train_log'
@@ -27,57 +10,74 @@ if __name__ == '__main__':
     for logdir in os.listdir(path):
         logdir = path + '/' + logdir
 
-        
-        # find best result info        
-        #find_min_error_epoch(logdir)
-        
-        # 1. make checkpoint file
-        ckpt_file = 'checkpoint'
-        #make_ckpt(logdir, 'min-validation_error_top1', ckpt_file)
-        # 2. finc meta file
+        with open(logdir + '/config.json') as f:
+            config = json.load(f)
+
+        # 1. finc meta file
         for file in os.listdir(logdir):
             if '.meta' in file:
                 meta_file = file
                 break
-        # 3. dump ckpt to npz
+        # 2. dump ckpt to npz
         dump_py = 'Scripts/dump-model-params.py'
-        ckpt_file = logdir + '/' + ckpt_file
+        ckpt_file = logdir + '/checkpoint'
         meta_file = logdir + '/' + meta_file
         outfile = logdir + '/' + 'best.npz'
         r = os.system('python %s --meta %s %s %s' % (dump_py, meta_file, ckpt_file, outfile))
         
         
         # draw distribution
-        outfile = logdir + '/' + 'best.npz'
+        #outfile = logdir + '/' + 'best.npz'
         dist_path = logdir + '/dist'
+
         r = os.system('mkdir ' + dist_path.replace('/', '\\'))
         dic = dict(np.load(outfile))
-        for key in dic.keys():
-            if 'W:0' in key:
+
+        keys = list(dic.keys())
+        for key in keys:
+            if '/W:0' in key:
                 x = dic[key].flatten()
-                max_val = np.amax(np.absolute(x))
-                mid_val = max_val * 0.5
+
+                name_scope, device = key.split('/W')
+                maxW_name = 'regularize_cost_internals/' + name_scope + '/maxW' + device
+
+                if 'conv1' in key or 'fct' in key:
+                    maxW = np.amax(np.absolute(x))
+                elif maxW_name in keys:
+                    maxW = dic[maxW_name]
+                    maxW_temp = np.amax(np.absolute(x))
+                else:
+                    maxW = np.amax(np.absolute(x))
+
+                inBIT, exBIT = config['regularizer']['sub_reg']['sub_ratio']
+                ratio = (1 / (1 + ((2 ** int(exBIT) - 1) / (2 ** int(inBIT) - 1))))
+
+                thresh = maxW * ratio
 
                 x_abs = np.absolute(x)
                 cnt1 = 0; cnt2 = 0
                 for i in range(x.shape[0]):
-                    if x_abs[i] >= mid_val:
+                    if x_abs[i] >= thresh:
                         cnt2 += 1
                     else:
                         cnt1 += 1
                 prob1 = cnt1 / x.shape[0] * 100
                 prob2 = cnt2 / x.shape[0] * 100
                 txt = 'lv3: {:.2f}%/ lv7: {:.2f}%'.format(prob1, prob2)
-                #print(key)
-                #print(max_val)
+
                 a = plt.hist(x, bins=101, density=1)
-                #print(a)
+
                 max_prob = np.amax(np.absolute(a[0]))
-                plt.plot([-max_val, -max_val], [0,max_prob], color='red')
-                plt.plot([max_val, max_val], [0,max_prob], color='red')
-                plt.plot([-mid_val, -mid_val], [0,max_prob], color='green')
-                plt.plot([mid_val, mid_val], [0,max_prob], color='green')
-                plt.text(-max_val,max_prob, txt)
+
+                plt.plot([-maxW, -maxW], [0,max_prob], color='red')
+                plt.plot([maxW, maxW], [0,max_prob], color='red')
+                plt.plot([-thresh, -thresh], [0,max_prob], color='green')
+                plt.plot([thresh, thresh], [0,max_prob], color='green')
+                if maxW_name in keys:
+                    plt.plot([-maxW_temp, -maxW_temp], [0, max_prob/4], color='purple')
+                    plt.plot([maxW_temp, maxW_temp], [0, max_prob/4], color='purple')
+
+                plt.text(-maxW,max_prob, txt)
                 plt.ylabel('Probability')
                 plt.xlabel(key)
                 file_path = dist_path + '/' + key.split(':')[0].replace('/', '.') + '.png'

@@ -25,6 +25,27 @@ def quantize_midrise(x, k):
 
     return _quantize_midrise(x)
 
+
+def quantize_odd(x, s):
+    n = float((s - 1) / 2)
+
+    @tf.custom_gradient
+    def _quantize_odd(x):
+        return tf.round(x * n) / n, lambda dy: dy
+
+    return _quantize_odd(x)
+
+
+def quantize_even(x, s):
+    n = float(s / 2 - 0.5)
+
+    @tf.custom_gradient
+    def _qunatize_even(x):
+        return (tf.floor(x * n) + 0.5) / n, lambda dy: dy
+
+    return _qunatize_even(x)
+
+
 '''
 class GlobalStep(Callback):
     def get_global_step(self):
@@ -42,8 +63,8 @@ def quantize_weight(bitW, name, opts):
                     return x
 
                 if eval(opts['fix_max']):
-                    param_name = x.op.name.split('/W')[0] + '/maxW'
-                    max_x = tf.stop_gradient(tf.get_variable(param_name))
+                    param_name = 'regularize_cost_internals/' + x.op.name.split('/W')[0] + '/maxW'
+                    max_x = tf.stop_gradient(tf.Variable(1.0, name=param_name))
                     max_x *= float(opts['max_scale'])
                 else:
                     max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
@@ -51,12 +72,12 @@ def quantize_weight(bitW, name, opts):
 
                 if eval(opts['is_Lv']): # midtread
                     assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
-                    x = quantize_midtread(x, bitW - 1)
+                    x = quantize_odd(x, bitW)
                 else:  # midrise
                     x = quantize_midrise(x, bitW - 1)
 
                 w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
-                return tf.multiply(w_s + max_x, x)
+                return tf.multiply(w_s * max_x, x)
             return qw
 
         # 2-Level Quantization (need mask tensor)
