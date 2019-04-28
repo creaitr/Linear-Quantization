@@ -54,7 +54,7 @@ class Model(ModelDesc):
         def new_get_variable(v):
             name = v.op.name
             # don't quantize first and last layer
-            if not name.endswith('W') or 'conv1' in name or 'fct' in name:
+            if not name.endswith('/W') or 'conv1' in name or 'fct' in name:
                 return v
             else:
                 logger.info("Quantizing weight {}".format(v.op.name))

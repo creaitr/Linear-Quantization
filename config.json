@@ -6,6 +6,8 @@
   "load": {
     "name": null,
     "find_max": "False",
+    "add_reg_prefix": "False",
+    "del_reg_prefix": "False",
     "make_mask": "False",
     "clustering": "False"
   },

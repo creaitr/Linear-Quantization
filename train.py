@@ -45,9 +45,9 @@ def get_train_config(config):
     else:
         saved_model = dict(np.load(config['load']['name']))
         if eval(config['load']['find_max']):
-            saved_model = Utils.find_max(saved_model)
+            saved_model = Utils.find_max(saved_model, config['load'])
         if eval(config['load']['make_mask']):
-            saved_model = Utils.make_mask(saved_model, eval(config['quantizer']['W_opts']['threshold_bit']))
+            saved_model = Utils.make_mask(saved_model, config)
         if eval(config['load']['clustering']):
             saved_model, cluster_idx_ls = Utils.clustering(saved_model, int(config['quantizer']['BITW']), eval(config['quantizer']['W_opts']['is_Lv']))
             model.add_clustering_update(cluster_idx_ls)

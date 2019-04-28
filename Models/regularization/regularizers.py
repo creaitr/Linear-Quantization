@@ -2,14 +2,14 @@ import tensorflow as tf
 
 
 class Ridge():
-    def get_func(self):
+    def get_func(self, *args, **kwargs):
         def func(x):
             return tf.multiply(0.5, tf.reduce_sum(tf.square(x)), name='ridge')
         return func
 
 
 class Lasso():
-    def get_func(self):
+    def get_func(self, *args, **kwargs):
         def func(x):
             return tf.reduce_sum(tf.abs(x), name='lasso')
         return func

@@ -6,6 +6,9 @@ from tensorpack.utils.argtools import graph_memoized
 #from tensorpack.callbacks.base import Callback
 
 
+__all__ = ['ternarize']
+
+
 def quantize_midtread(x, k):
     n = float(2 ** k - 1)
 
@@ -63,8 +66,9 @@ def quantize_weight(bitW, name, opts):
                     return x
 
                 if eval(opts['fix_max']):
-                    param_name = 'regularize_cost_internals/' + x.op.name.split('/W')[0] + '/maxW'
-                    max_x = tf.stop_gradient(tf.Variable(1.0, name=param_name))
+                    #param_name = 'regularize_cost_internals/' + x.op.name.split('/W')[0] + '/maxW'
+                    max_x = tf.stop_gradient(tf.get_variable('maxW', initializer=1.0, dtype=tf.float32))
+                    x = tf.clip_by_value(x, -max_x, max_x)
                     max_x *= float(opts['max_scale'])
                 else:
                     max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
@@ -72,11 +76,13 @@ def quantize_weight(bitW, name, opts):
 
                 if eval(opts['is_Lv']): # midtread
                     assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
+                    if bitW == 3:
+                        return ternarize(x)
                     x = quantize_odd(x, bitW)
                 else:  # midrise
                     x = quantize_midrise(x, bitW - 1)
 
-                w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
+                w_s = tf.get_variable('scale_Ws', initializer=1.0, dtype=tf.float32)
                 return tf.multiply(w_s * max_x, x)
             return qw
 
