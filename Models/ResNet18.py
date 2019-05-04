@@ -164,7 +164,7 @@ class Model(ModelDesc):
                 mask_name = name_scope + '/maskW'
                 mask = tf.get_variable(mask_name, shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
 
-                new_x = tf.where(mask == 1.0, tf.clip_by_value(x, -thresh, thresh) - 0.0000001, tf.clip_by_value(x, -max_x, max_x))
+                new_x = tf.where(mask == 1.0, tf.clip_by_value(x, -thresh, thresh), x)
                 return x.assign(new_x).op
 
         self.centralizing = func
@@ -234,8 +234,9 @@ class Model(ModelDesc):
         opt = get_optimizer(self.optimizer_config)
 
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['centralized']):
-            self.add_centralizing_update()
-            opt = optimizer.PostProcessOptimizer(opt, self.centralizing)
+            #self.add_centralizing_update()
+            #opt = optimizer.PostProcessOptimizer(opt, self.centralizing)
+            pass
         if self.quantizer_config['name'] == 'cluster' and eval(self.load_config['clustering']):
             opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.clustering)])
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['pruning']):
