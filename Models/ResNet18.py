@@ -164,7 +164,7 @@ class Model(ModelDesc):
                 mask_name = name_scope + '/maskW'
                 mask = tf.get_variable(mask_name, shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
 
-                new_x = tf.where(mask == 1.0, tf.clip_by_value(x, -thresh, thresh), x)
+                new_x = tf.where(mask == 1.0, tf.clip_by_value(x, -thresh, thresh) - 0.0000001, tf.clip_by_value(x, -max_x, max_x))
                 return x.assign(new_x).op
 
         self.centralizing = func
@@ -265,7 +265,7 @@ class Model(ModelDesc):
             callbacks += [ScheduledHyperParamSetter('learning_rate',
                                       [(1, 0.1), (82, 0.01), (123, 0.001), (300, 0.0002)])]
 
-        if self.config['save_init']:
+        if eval(self.config['save_init']):
             callbacks = [InitSaver()]
 
         max_epoch = int(self.optimizer_config['max_epoch'])

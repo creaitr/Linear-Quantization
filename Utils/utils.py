@@ -38,7 +38,7 @@ def make_mask(dic={}, config=[]):
 
             mask_name = name_scope + '/maskW' + device
             if mask_name not in keys:
-                mask = np.where(np.absolute(dic[key]) < threshold, np.float32(1.), np.float32(0.))
+                mask = np.where(np.absolute(dic[key]) <= threshold, np.float32(1.), np.float32(0.))
                 dic[mask_name] = mask
     return dic
 

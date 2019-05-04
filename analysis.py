@@ -75,7 +75,7 @@ if __name__ == '__main__':
                 x_abs = np.absolute(x)
                 cnt1 = 0; cnt2 = 0
                 for i in range(x.shape[0]):
-                    if x_abs[i] >= thresh:
+                    if x_abs[i] > thresh:
                         cnt2 += 1
                     else:
                         cnt1 += 1
@@ -112,7 +112,7 @@ if __name__ == '__main__':
         part1_vals = [result_dic[key] for key in result_dic.keys() if np.absolute(key) < thresh]
         part2_keys = [key for key in result_dic.keys() if np.absolute(key) > thresh]
         part2_vals = [result_dic[key] for key in result_dic.keys() if np.absolute(key) > thresh]
-        print(part1_keys); print(part1_vals)
+        #print(part1_keys); print(part1_vals)
         plt.bar(part1_keys, part1_vals, color='blue')
         plt.bar(part2_keys, part2_vals, color='red')
 
