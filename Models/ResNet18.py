@@ -159,13 +159,13 @@ class Model(ModelDesc):
                 else:
                     max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
 
-                thresh = max_x * ratio
+                thresh = max_x * ratio * 0.999
 
                 mask_name = name_scope + '/maskW'
                 mask = tf.get_variable(mask_name, shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
 
-                new_x = tf.where(mask == 1.0, tf.clip_by_value(x, -thresh + 0.1, thresh - 0.1), x)
-                return x.assign(new_x).op
+                new_x = tf.where(tf.equal(1.0, mask), tf.clip_by_value(x, -thresh, thresh), x)
+                return tf.assign(x, new_x, use_locking=False).op
 
         self.centralizing = func
 
@@ -215,7 +215,7 @@ class Model(ModelDesc):
                 random_number = K.random_uniform(shape=(1, 1, 1, int(mask.shape[-1])))
                 random_number = K.cast(random_number < probThreshold, dtype='float32')
 
-                thresh = max_x * ratio
+                thresh = max_x * ratio * 0.999
 
                 # Incorporate hysteresis into the threshold
                 alpha = thresh
@@ -226,7 +226,7 @@ class Model(ModelDesc):
                 new_mask = mask - K.cast(abs_kernel < alpha, dtype='float32') * random_number
                 new_mask = new_mask + K.cast(abs_kernel > beta, dtype='float32') * random_number
                 new_mask = K.clip(x=new_mask, min_value=0., max_value=1.)
-                return mask.assign(new_mask).op
+                return tf.assign(mask, new_mask, use_locking=False).op
 
         self.masking = func
 
