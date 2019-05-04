@@ -60,7 +60,7 @@ def quantize_weight(bitW, name, opts):
     # 1. Linear Quantization
     if name == 'linear':
         # 1-Level Quantization
-        if eval(opts['centralized']) == False:
+        if eval(opts['centralized']) == False or eval(opts['centralized']) == True:
             def qw(x):
                 if bitW == 32:
                     return x
