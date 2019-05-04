@@ -8,6 +8,7 @@ from __future__ import print_function
 import numpy as np
 import cv2
 import tensorflow as tf
+import tensorflow.keras.backend as K
 
 # tensorpack
 from tensorpack import *
@@ -15,6 +16,7 @@ from tensorpack.tfutils.varreplace import remap_variables
 from tensorpack.tfutils import optimizer, gradproc
 from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
 from tensorpack.utils import logger
+from tensorpack.tfutils.common import get_global_step_var
 
 # custom
 from .regularization import regularizers
@@ -23,10 +25,13 @@ from .activation.activation_funcs import get_activation_func
 from .quantization.quantizers import quantize_weight, quantize_activation, quantize_gradient
 from .callbacks import CkptModifier
 from .callbacks import StatsChecker
+from .callbacks import InitSaver
 
 
 class Model(ModelDesc):
     def __init__(self, config={}, size=32):
+        self.config = config
+
         self.size = size
         self.load_config = config['load']
         self.initializer_config = config['initializer']
@@ -87,10 +92,10 @@ class Model(ModelDesc):
             return shortcut + stem
 
         def group(x, name, channel, nr_block, stride):
-            with tf.variable_scope(name + 'blk1'):
+            with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
                 x = resblock(x, channel, stride)
             for i in range(2, nr_block + 1):
-                with tf.variable_scope(name + 'blk{}'.format(i)):
+                with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
                     x = resblock(x, channel, 1)
             return x
 
@@ -138,29 +143,90 @@ class Model(ModelDesc):
 
     def add_centralizing_update(self):
         def func(x):
-            print(x)
+            param_name = x.op.name
+            if '/W' in param_name and 'conv1' not in param_name and 'fct' not in param_name:
+                name_scope, device_scope = x.op.name.split('/W')
+
+                inBIT, exBIT = eval(self.quantizer_config['W_opts']['threshold_bit'])
+                ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
+
+                if eval(self.quantizer_config['W_opts']['fix_max']):
+                    with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
+                        #max_x_name = 'post_op_internals/' + name_scope + '/maxW'
+                        #max_x_name = name_scope + '/maxW'
+                        max_x = tf.stop_gradient(tf.get_variable('maxW', shape=(), initializer=tf.ones_initializer, dtype=tf.float32))
+                        max_x *= float(self.quantizer_config['W_opts']['max_scale'])
+                else:
+                    max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+
+                thresh = max_x * ratio
+
+                mask_name = name_scope + '/maskW'
+                mask = tf.get_variable(mask_name, shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
+
+                new_x = tf.where(mask == 1.0, tf.clip_by_value(x, -thresh, thresh), x)
+                return x.assign(new_x).op
 
         self.centralizing = func
 
     def add_clustering_update(self, n_ls):
-        def func(x):
-            cluster_mask_name = x.op.name.split('/W')[0] + '/cluster_maskW'
-            cluster_mask = tf.get_variable(cluster_mask_name)
+        def func(grad, val):
+            val_name = val.op.name
+            if '/W' in val_name and 'conv1' not in val_name and 'fct' not in val_name:
+                cluster_mask_name = val_name.split('/W')[0] + '/cluster_maskW'
+                cluster_mask = tf.get_variable(cluster_mask_name, shape=grad.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
 
-            sum_grads = []
-            for n in n_ls:
-                grads.append(tf.reduce_sum(tf.where(cluster_mask == n, x, 0.)))
+                total_grad = tf.zeros(shape=grad.shape)
+                sum_grads = []
 
-            total_grad = tf.zeros(shape=x.shape)
-            for i in range(len(n_ls)):
-                total_grad += tf.where(cluster_mask == n_ls[i], sum_grads[i], 0.)
-            return total_grad
+                for n in n_ls:
+                    sum_grads.append(tf.reduce_sum(tf.where(cluster_mask == n, grad, total_grad)))
+
+                for i in range(len(n_ls)):
+                    total_grad += tf.where(cluster_mask == n_ls[i], sum_grads[i], 0.)
+                return total_grad
 
         self.clustering = func
 
     def add_masking_update(self):
-        def func(x):
-            print(x)
+        gamma = 0.0001
+        crate = 3.
+
+        inBIT, exBIT = eval(self.quantizer_config['W_opts']['threshold_bit'])
+        ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
+
+        def func(val):
+            val_name = val.op.name
+            if '/W' in val_name and 'conv1' not in val_name and 'fct' not in val_name:
+                name_scope, device_scope = x.op.name.split('/W')
+
+                with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
+                    if eval(self.quantizer_config['W_opts']['fix_max']) ==True:
+                        max_x = tf.stop_gradient(
+                            tf.get_variable('maxW', shape=(), initializer=tf.ones_initializer, dtype=tf.float32))
+                        max_x *= float(self.quantizer_config['W_opts']['max_scale'])
+                    else:
+                        max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+                    mask = tf.get_variable('maskW', shape=val.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
+
+                probThreshold = (1 + gamma * get_global_step_var()) ** -1
+
+                # Determine which filters shall be updated this iteration
+                random_number = K.random_uniform(shape=(1, 1, 1, int(mask.shape[-1])))
+                random_number = K.cast(random_number < probThreshold, dtype='float32')
+
+                thresh = max_x * ratio
+
+                # Incorporate hysteresis into the threshold
+                alpha = thresh
+                beta = 1.2 * thresh
+
+                # Update the significant weight mask by applying the threshold to the unmasked weights
+                abs_kernel = K.abs(x=val)
+                new_mask = mask - K.cast(abs_kernel < alpha, dtype='float32') * random_number
+                new_mask = new_mask + K.cast(abs_kernel > beta, dtype='float32') * random_number
+                new_mask = K.clip(x=new_mask, min_value=0., max_value=1.)
+                return mask.assign(new_mask).op
 
         self.masking = func
 
@@ -171,10 +237,10 @@ class Model(ModelDesc):
             self.add_centralizing_update()
             opt = optimizer.PostProcessOptimizer(opt, self.centralizing)
         if self.quantizer_config['name'] == 'cluster' and eval(self.load_config['clustering']):
-            opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.clustering, '.*/W')])
+            opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.clustering)])
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['pruning']):
             self.add_masking_update()
-            opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.masking, '.*/W')])
+            opt = optimizer.PostProcessOptimizer(opt, self.masking)
         return opt
 
     def get_callbacks(self, ds_tst):
@@ -199,6 +265,8 @@ class Model(ModelDesc):
             callbacks += [ScheduledHyperParamSetter('learning_rate',
                                       [(1, 0.1), (82, 0.01), (123, 0.001), (300, 0.0002)])]
 
+        if self.config['save_init']:
+            callbacks = [InitSaver()]
 
         max_epoch = int(self.optimizer_config['max_epoch'])
         return callbacks, max_epoch

@@ -60,7 +60,7 @@ def quantize_weight(bitW, name, opts):
     # 1. Linear Quantization
     if name == 'linear':
         # 1-Level Quantization
-        if eval(opts['centralized']) == False:
+        if eval(opts['centralized']) == False or eval(opts['centralized']) == True:
             def qw(x):
                 if bitW == 32:
                     return x
@@ -86,44 +86,54 @@ def quantize_weight(bitW, name, opts):
                 return tf.multiply(w_s * max_x, x)
             return qw
 
-        # 2-Level Quantization (need mask tensor)
-        elif eval(opts['centralized']) == True:
-            '''
-            inBIT, exBIT = eval(opts['threshold_bit'])
-            ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
-
-            def qw(x):
-                if bitW == 32:
-                    return x
-
-                if eval(opts['fix_max']):
-                    param_name = x.op.name.split('/W')[0] + '/maxW'
-                    max_x = tf.stop_gradient(tf.get_variable(param_name))
-                    max_x *= float(opts['max_scale'])
-                else:
-                    max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
-                x = x / max_x
-
-                threshold = max_x * ratio
-
-                if eval(opts['is_Lv']): # midtread
-                    assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
-                    x = quantize_midtread(x, bitW - 1)
-                else:  # midrise
-                    x = quantize_midrise(x, bitW - 1)
-
-                w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
-                return tf.multiply(w_s + max_x, x)
-            return qw
-            '''
-            return
-
     # 2. Centroid Quantization
-    elif name == 'centroid':
-        return
+    elif name == 'cluster':
+        return tf.identity
+
     # 3. Dynamic Network Surgery
     elif name == 'dns':
-        return
+
+        if type(opts['threshold_bit']) == str:
+            inBIT, exBIT = eval(opts['threshold_bit'])
+        else:
+            inBIT, exBIT = opts['threshold_bit']
+        ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
+
+        def qw(x):
+            if bitW == 32:
+                return x
+
+            if eval(opts['fix_max']):
+                # param_name = 'regularize_cost_internals/' + x.op.name.split('/W')[0] + '/maxW'
+                max_x = tf.stop_gradient(tf.get_variable('maxW', initializer=1.0, dtype=tf.float32))
+                x = tf.clip_by_value(x, -max_x, max_x)
+                max_x *= float(opts['max_scale'])
+            else:
+                max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+            x = x / max_x
+
+            thresh = ratio * max_x - 0.00001
+
+            if eval(opts['is_Lv']):  # midtread
+                assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
+                if bitW == 3:
+                    return ternarize(x)
+
+                mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
+
+                @tf.custom_gradient
+                def clip_with_STE(x):
+                    return tf.clip_by_value(x, -thresh, thresh), lambda dy: dy
+
+                x = quantize_odd(x, bitW)
+                x = tf.where(mask == 1, clip_with_STE(x), x)
+            else:  # midrise
+                x = quantize_midrise(x, bitW - 1)
+
+            w_s = tf.get_variable('scale_Ws', initializer=1.0, dtype=tf.float32)
+            return tf.multiply(w_s * max_x, x)
+
+        return qw
 
 
 def quantize_activation(bitA):

@@ -110,6 +110,7 @@ temp/
 
 # Cifa10 dataset folder
 cifar-10-batches-py/
+cifar-10-python.tar.gz
 
 # Pycharm files
 .DS_Store/

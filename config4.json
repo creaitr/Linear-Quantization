@@ -1,49 +1,49 @@
 {
   "model": "ResNet18",
   "dataset": "Cifar10",
-  "logdir": "log",
-  "gpu": "1",
-  "save_init": "True",
+  "logdir": "Clust7LW4A",
+  "gpu": "",
+  "save_init": "False",
   "load": {
-    "name": null,
+    "name": "centralized.npz",
     "find_max": "False",
     "add_reg_prefix": "False",
     "del_reg_prefix": "False",
     "make_mask": "False",
-    "clustering": "False"
+    "clustering": "True"
   },
   "initializer": {
     "scale": 2.0,
     "mode": "fan_in"
   },
-  "activation": "relu",
+  "activation": "relu1",
   "regularizer": {
     "name": "Ridge",
     "lmbd": 0.0002,
     "sub_reg": {
       "relative_lmbd": 0.25,
-      "fix_max": "True",
+      "fix_max": "False",
       "sub_ratio": [2,2]
     }
   },
   "quantizer": {
-    "name": "linear",
-    "BITW": 32,
+    "name": "cluster",
+    "BITW": 7,
     "W_opts": {
-      "fix_max": "False",
+      "fix_max": "True",
       "max_scale": 1.0,
-      "is_Lv": "False",
+      "is_Lv": "True",
       "centralized": "False",
       "pruning": "False",
       "threshold_bit": "[2,2]"
     },
-    "BITA": 32,
+    "BITA": 4,
     "BITG": 32
   },
   "optimizer": {
     "name": "Momentum",
     "lr": 0.01,
-    "lr_schedule": [[1, 0.1], [82, 0.01], [123, 0.001], [300, 0.0002]],
-    "max_epoch": 200
+    "lr_schedule": [[1, 0.01], [42, 0.001]],
+    "max_epoch": 119
   }
 }

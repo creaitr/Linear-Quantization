@@ -33,13 +33,22 @@ if __name__ == '__main__':
         r = os.system('mkdir ' + dist_path.replace('/', '\\'))
         dic = dict(np.load(outfile))
 
+        inBIT, exBIT = config['regularizer']['sub_reg']['sub_ratio']
+        inBIT = int(inBIT); exBIT = int(exBIT)
+        ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
+
+        total_weights = 0
+        total_in_prob = 0
+        total_out_prob = 0
+        result_dic = {}
+
         keys = list(dic.keys())
         for key in keys:
             if '/W:0' in key:
                 x = dic[key].flatten()
 
                 name_scope, device = key.split('/W')
-                maxW_name = 'regularize_cost_internals/' + name_scope + '/maxW' + device
+                maxW_name = name_scope + '/maxW' + device
 
                 if 'conv1' in key or 'fct' in key:
                     maxW = np.amax(np.absolute(x))
@@ -47,12 +56,21 @@ if __name__ == '__main__':
                     maxW = dic[maxW_name]
                     maxW_temp = np.amax(np.absolute(x))
                 else:
-                    maxW = np.amax(np.absolute(x))
-
-                inBIT, exBIT = config['regularizer']['sub_reg']['sub_ratio']
-                ratio = (1 / (1 + ((2 ** int(exBIT) - 1) / (2 ** int(inBIT) - 1))))
-
+                    maxW_name = 'regularize_cost_internals/' + maxW_name
+                    if maxW_name in keys:
+                        maxW = dic[maxW_name]
+                        maxW_temp = np.amax(np.absolute(x))
+                    else:
+                        maxW = np.amax(np.absolute(x))
                 thresh = maxW * ratio
+
+                n = ((2 ** inBIT - 1 + 2 ** exBIT) - 1) / 2
+                x_temp = np.round((np.clip(x, -maxW, maxW) / maxW) * n)
+                for i in range(x.shape[0]):
+                    if x_temp[i] in result_dic.keys():
+                        result_dic[x_temp[i]] += 1
+                    else:
+                        result_dic[x_temp[i]] = 1
 
                 x_abs = np.absolute(x)
                 cnt1 = 0; cnt2 = 0
@@ -64,6 +82,10 @@ if __name__ == '__main__':
                 prob1 = cnt1 / x.shape[0] * 100
                 prob2 = cnt2 / x.shape[0] * 100
                 txt = 'lv3: {:.2f}%/ lv7: {:.2f}%'.format(prob1, prob2)
+                # for total
+                total_weights += x.shape[0]
+                total_in_prob += cnt1
+                total_out_prob += cnt2
 
                 a = plt.hist(x, bins=101, density=1)
 
@@ -77,9 +99,31 @@ if __name__ == '__main__':
                     plt.plot([-maxW_temp, -maxW_temp], [0, max_prob/4], color='purple')
                     plt.plot([maxW_temp, maxW_temp], [0, max_prob/4], color='purple')
 
-                plt.text(-maxW,max_prob, txt)
+                plt.text(-maxW, max_prob, txt)
                 plt.ylabel('Probability')
                 plt.xlabel(key)
                 file_path = dist_path + '/' + key.split(':')[0].replace('/', '.') + '.png'
                 plt.savefig(file_path)
                 plt.close()
+
+        maxQ = max(list(result_dic.keys()))
+        thresh = maxQ * ratio
+        part1_keys = [key for key in result_dic.keys() if np.absolute(key) < thresh]
+        part1_vals = [result_dic[key] for key in result_dic.keys() if np.absolute(key) < thresh]
+        part2_keys = [key for key in result_dic.keys() if np.absolute(key) > thresh]
+        part2_vals = [result_dic[key] for key in result_dic.keys() if np.absolute(key) > thresh]
+        print(part1_keys); print(part1_vals)
+        plt.bar(part1_keys, part1_vals, color='blue')
+        plt.bar(part2_keys, part2_vals, color='red')
+
+        for key in result_dic.keys():
+            plt.text(key, result_dic[key], str(result_dic[key]), horizontalalignment='center')
+
+        plt.ylabel('Probability')
+        plt.xlabel('Quantized Weights')
+        file_path = dist_path + '/quantized.png'
+        plt.savefig(file_path)
+        plt.close()
+
+        print('total in prob:', total_in_prob / total_weights * 100)
+        print('total out prob:', total_out_prob / total_weights * 100)

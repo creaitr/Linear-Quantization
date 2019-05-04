@@ -3,6 +3,7 @@
   "dataset": "Cifar10",
   "logdir": "log",
   "gpu": "1",
+  "save_init": "False",
   "load": {
     "name": "pre-trained.npz",
     "find_max": "True",

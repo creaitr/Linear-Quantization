@@ -49,7 +49,7 @@ def get_train_config(config):
         if eval(config['load']['make_mask']):
             saved_model = Utils.make_mask(saved_model, config)
         if eval(config['load']['clustering']):
-            saved_model, cluster_idx_ls = Utils.clustering(saved_model, int(config['quantizer']['BITW']), eval(config['quantizer']['W_opts']['is_Lv']))
+            saved_model, cluster_idx_ls = Utils.clustering(saved_model, config['quantizer'])
             model.add_clustering_update(cluster_idx_ls)
         session_init = DictRestore(saved_model)
 

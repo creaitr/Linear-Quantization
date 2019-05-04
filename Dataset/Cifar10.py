@@ -35,8 +35,8 @@ class Cifar10:
             ]
         ds = AugmentImageComponent(ds, augmentors)
         ds = BatchData(ds, self.batch_size, remainder=not isTrain)
-        if isTrain:
-            ds = PrefetchData(ds, 3, 2)
+        #if isTrain:
+        #    ds = PrefetchData(ds, 3, 2)
         return ds
 
     def load_data(self):
