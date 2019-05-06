@@ -119,13 +119,13 @@ def quantize_weight(bitW, name, opts):
                 if bitW == 3:
                     return ternarize(x)
 
-                mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
+                mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.ones_initializer, dtype=tf.float32)
 
                 @tf.custom_gradient
                 def clip_with_STE(x):
                     return tf.clip_by_value(x, -thresh, thresh), lambda dy: dy
 
-                x = tf.where(tf.equal(1.0, mask), clip_with_STE(x), x)
+                x = tf.where(tf.equal(0.0, mask), clip_with_STE(x), x)
                 x = quantize_odd(x, bitW)
             else:  # midrise
                 x = quantize_midrise(x, bitW - 1)

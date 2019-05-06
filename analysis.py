@@ -119,11 +119,19 @@ if __name__ == '__main__':
         for key in result_dic.keys():
             plt.text(key, result_dic[key], str(result_dic[key]), horizontalalignment='center')
 
+        print('total in prob:', total_in_prob / total_weights * 100)
+        print('total out prob:', total_out_prob / total_weights * 100)
+
+        prob1 = total_in_prob / total_weights * 100
+        prob2 = total_out_prob / total_weights * 100
+        txt = 'lv3: {:.2f}%/ lv7: {:.2f}%'.format(prob1, prob2)
+        x_temp = min([float(x) for x in part2_keys])
+        y_temp = max([float(x) for x in part1_vals])
+        plt.text(x_temp, y_temp, txt)
+
         plt.ylabel('Probability')
         plt.xlabel('Quantized Weights')
         file_path = dist_path + '/quantized.png'
         plt.savefig(file_path)
         plt.close()
 
-        print('total in prob:', total_in_prob / total_weights * 100)
-        print('total out prob:', total_out_prob / total_weights * 100)

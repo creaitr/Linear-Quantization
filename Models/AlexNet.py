@@ -68,53 +68,42 @@ class Model(ModelDesc):
         def activate(x):
             return qa(self.activation(x))
 
-        def resblock(x, channel, stride):
-            def get_stem_full(x):
-                return (LinearWrap(x)
-                        .Conv2D('stem_conv_a', channel, 3)
-                        .BatchNorm('stem_bn')
-                        .apply(activate)
-                        .Conv2D('stem_conv_b', channel, 3)())
-            
-            channel_mismatch = channel != x.get_shape().as_list()[3]
-            if stride != 1 or channel_mismatch:
-                if stride != 1:
-                    x = AvgPooling('avgpool', x, stride, stride)
-                x = BatchNorm('bn', x)
-                x = activate(x)
-                shortcut = Conv2D('shortcut', x, channel, 1)
-                stem = get_stem_full(x)
-            else:
-                shortcut = x
-                x = BatchNorm('bn', x)
-                x = activate(x)
-                stem = get_stem_full(x)
-            return shortcut + stem
-
-        def group(x, name, channel, nr_block, stride):
-            with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
-                x = resblock(x, channel, stride)
-            for i in range(2, nr_block + 1):
-                with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
-                    x = resblock(x, channel, 1)
-            return x
-
         with remap_variables(new_get_variable), \
                 argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
                 argscope(Conv2D, use_bias=False, nl=tf.identity,
                          kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['scale']),
                                                                             mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
-                      .Conv2D('conv1', 16, 3)   # size=32
+                      .Conv2D('conv1', 32, 3)
                       .BatchNorm('bn1')
                       .apply(activate)
-                      .apply(group, 'res2', 16, 2, 1)  # size=32
-                      .apply(group, 'res3', 32, 3, 2)  # size=16
-                      .apply(group, 'res4', 64, 3, 2)  # size=8
-                      .BatchNorm('last_bn')
+                      .Conv2D('conv2', 64, 3, padding='SAME', split=2)
+                      .BatchNorm('bn2')
+                      .MaxPooling('pool2', 3, 2, padding='SAME')  # size=16
                       .apply(activate)
-                      .GlobalAvgPooling('gap')
-                      .FullyConnected('fct', 10)())
+
+                      .Conv2D('conv3', 96, 3)
+                      .BatchNorm('bn3')
+                      .apply(activate)
+
+                      .Conv2D('conv4', 96, 3, split=2)
+                      .BatchNorm('bn4')
+                      .apply(activate)
+
+                      .Conv2D('conv5', 64, 3, split=2)
+                      .BatchNorm('bn5')
+                      .MaxPooling('pool5', 3, 2, padding='SAME')    # size=8
+                      .apply(activate)
+
+                      .FullyConnected('fc1', 1024, use_bias=False)
+                      .BatchNorm('bnfc1')
+                      .apply(activate)
+
+                      .FullyConnected('fc2', 1024, use_bias=False)
+                      .BatchNorm('bnfc2')
+                      .apply(activate)
+
+                      .FullyConnected('fct', 10, use_bias=True)())
         prob = tf.nn.softmax(logits, name='output')
 
         cost = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=label)
