@@ -180,10 +180,13 @@ class Model(ModelDesc):
                 sum_grads = []
 
                 for n in n_ls:
-                    sum_grads.append(tf.reduce_sum(tf.where(cluster_mask == n, grad, total_grad)))
+                    sum_grads.append(
+                        tf.reduce_sum(tf.where(tf.equal(np.float32(n), cluster_mask), grad, total_grad)) /
+                        tf.reduce_sum(tf.where(tf.equal(np.float32(n), cluster_mask), tf.ones(grad.shape), tf.zeros(grad.shape))))
 
                 for i in range(len(n_ls)):
-                    total_grad += tf.where(cluster_mask == n_ls[i], sum_grads[i], 0.)
+                    total_grad = tf.where(tf.equal(np.float32(n_ls[i]), cluster_mask),
+                                          tf.fill(grad.shape, sum_grads[i]), total_grad)
                 return total_grad
 
         self.clustering = func

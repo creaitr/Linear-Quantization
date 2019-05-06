@@ -75,7 +75,7 @@ if __name__ == '__main__':
                 x_abs = np.absolute(x)
                 cnt1 = 0; cnt2 = 0
                 for i in range(x.shape[0]):
-                    if x_abs[i] > thresh:
+                    if x_abs[i] >= thresh:
                         cnt2 += 1
                     else:
                         cnt1 += 1

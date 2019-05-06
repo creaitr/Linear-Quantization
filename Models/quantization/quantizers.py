@@ -112,7 +112,7 @@ def quantize_weight(bitW, name, opts):
                 max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
             x = x / max_x
 
-            thresh = ratio * max_x - 0.00001
+            thresh = ratio * max_x * 0.999
 
             if eval(opts['is_Lv']):  # midtread
                 assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
@@ -125,8 +125,8 @@ def quantize_weight(bitW, name, opts):
                 def clip_with_STE(x):
                     return tf.clip_by_value(x, -thresh, thresh), lambda dy: dy
 
+                x = tf.where(tf.equal(1.0, mask), clip_with_STE(x), x)
                 x = quantize_odd(x, bitW)
-                x = tf.where(mask == 1, clip_with_STE(x), x)
             else:  # midrise
                 x = quantize_midrise(x, bitW - 1)
 
