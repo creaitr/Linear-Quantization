@@ -50,7 +50,12 @@ if __name__ == '__main__':
                 name_scope, device = key.split('/W')
                 maxW_name = name_scope + '/maxW' + device
 
-                if 'conv1' in key or 'fct' in key:
+                def check_cond(key):
+                    if 'conv1' in key or 'fct' in key:
+                        return False
+                    return True
+
+                if not check_cond(key):
                     maxW = np.amax(np.absolute(x))
                 elif maxW_name in keys:
                     maxW = dic[maxW_name]
@@ -64,28 +69,34 @@ if __name__ == '__main__':
                         maxW = np.amax(np.absolute(x))
                 thresh = maxW * ratio
 
-                n = ((2 ** inBIT - 1 + 2 ** exBIT) - 1) / 2
-                x_temp = np.round((np.clip(x, -maxW, maxW) / maxW) * n)
-                for i in range(x.shape[0]):
-                    if x_temp[i] in result_dic.keys():
-                        result_dic[x_temp[i]] += 1
+                if check_cond(key):
+                    if eval(config['quantizer']['W_opts']['is_Lv']):
+                        n = ((2 ** exBIT - 1) + (2 ** inBIT - 1)) / 2
+                        x_temp = np.round((np.clip(x, -maxW, maxW) / maxW) * n)
                     else:
-                        result_dic[x_temp[i]] = 1
+                        n = 2 ** float(config['quantizer']['BITW']) - 0.5
+                        x_temp = np.floor((np.clip(x, -maxW, maxW) / maxW) * n) + 0.5
+                    for i in range(x.shape[0]):
+                        if x_temp[i] in result_dic.keys():
+                            result_dic[x_temp[i]] += 1
+                        else:
+                            result_dic[x_temp[i]] = 1
 
-                x_abs = np.absolute(x)
-                cnt1 = 0; cnt2 = 0
-                for i in range(x.shape[0]):
-                    if x_abs[i] >= thresh:
-                        cnt2 += 1
-                    else:
-                        cnt1 += 1
-                prob1 = cnt1 / x.shape[0] * 100
-                prob2 = cnt2 / x.shape[0] * 100
-                txt = 'lv3: {:.2f}%/ lv7: {:.2f}%'.format(prob1, prob2)
-                # for total
-                total_weights += x.shape[0]
-                total_in_prob += cnt1
-                total_out_prob += cnt2
+                if check_cond(key):
+                    x_abs = np.absolute(x)
+                    cnt1 = 0; cnt2 = 0
+                    for i in range(x.shape[0]):
+                        if x_abs[i] >= thresh:
+                            cnt2 += 1
+                        else:
+                            cnt1 += 1
+                    prob1 = cnt1 / x.shape[0] * 100
+                    prob2 = cnt2 / x.shape[0] * 100
+                    txt = 'lv3: {:.2f}%/ lv7: {:.2f}%'.format(prob1, prob2)
+                    # for total
+                    total_weights += x.shape[0]
+                    total_in_prob += cnt1
+                    total_out_prob += cnt2
 
                 a = plt.hist(x, bins=101, density=1)
 
@@ -99,7 +110,8 @@ if __name__ == '__main__':
                     plt.plot([-maxW_temp, -maxW_temp], [0, max_prob/4], color='purple')
                     plt.plot([maxW_temp, maxW_temp], [0, max_prob/4], color='purple')
 
-                plt.text(-maxW, max_prob, txt)
+                if check_cond(key):
+                    plt.text(-maxW, max_prob, txt)
                 plt.ylabel('Probability')
                 plt.xlabel(key)
                 file_path = dist_path + '/' + key.split(':')[0].replace('/', '.') + '.png'
