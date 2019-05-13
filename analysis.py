@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 
 if __name__ == '__main__':
-    path = './train_log'
+    path = './trained_log'
     #path = './temp'
     for logdir in os.listdir(path):
         logdir = path + '/' + logdir
@@ -74,7 +74,7 @@ if __name__ == '__main__':
                         n = ((2 ** exBIT - 1) + (2 ** inBIT - 1)) / 2
                         x_temp = np.round((np.clip(x, -maxW, maxW) / maxW) * n)
                     else:
-                        n = 2 ** float(config['quantizer']['BITW']) - 0.5
+                        n = 2 ** (float(config['quantizer']['BITW']) - 1) - 0.5
                         x_temp = np.floor((np.clip(x, -maxW, maxW) / maxW) * n) + 0.5
                     for i in range(x.shape[0]):
                         if x_temp[i] in result_dic.keys():
@@ -107,8 +107,8 @@ if __name__ == '__main__':
                 plt.plot([-thresh, -thresh], [0,max_prob], color='green')
                 plt.plot([thresh, thresh], [0,max_prob], color='green')
                 if maxW_name in keys:
-                    plt.plot([-maxW_temp, -maxW_temp], [0, max_prob/4], color='purple')
-                    plt.plot([maxW_temp, maxW_temp], [0, max_prob/4], color='purple')
+                    plt.plot([-maxW_temp, -maxW_temp], [0, max_prob], color='purple')
+                    plt.plot([maxW_temp, maxW_temp], [0, max_prob], color='purple')
 
                 if check_cond(key):
                     plt.text(-maxW, max_prob, txt)
@@ -118,6 +118,8 @@ if __name__ == '__main__':
                 plt.savefig(file_path)
                 plt.close()
 
+        with open(logdir + '/result_dict.txt', 'w') as file:
+            file.write(str(result_dic))
         maxQ = max(list(result_dic.keys()))
         thresh = maxQ * ratio
         part1_keys = [key for key in result_dic.keys() if np.absolute(key) < thresh]
@@ -136,7 +138,7 @@ if __name__ == '__main__':
 
         prob1 = total_in_prob / total_weights * 100
         prob2 = total_out_prob / total_weights * 100
-        txt = 'lv3: {:.2f}%/ lv7: {:.2f}%'.format(prob1, prob2)
+        txt = 'lv3: {:.3f}%/ etc: {:.3f}%'.format(prob1, prob2)
         x_temp = min([float(x) for x in part2_keys])
         y_temp = max([float(x) for x in part1_vals])
         plt.text(x_temp, y_temp, txt)
