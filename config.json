@@ -3,7 +3,7 @@
   "dataset": "Cifar10",
   "logdir": "log",
   "gpu": "1",
-  "save_init": "True",
+  "save_init": "False",
   "load": {
     "name": null,
     "find_max": "False",

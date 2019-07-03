@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 
 if __name__ == '__main__':
-    path = './trained_log'
+    path = './train_log'
     #path = './temp'
     for logdir in os.listdir(path):
         logdir = path + '/' + logdir

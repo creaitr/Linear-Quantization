@@ -74,32 +74,33 @@ class Model(ModelDesc):
                          kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['scale']),
                                                                             mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
-                      .Conv2D('conv1', 32, 3)
+                      .Conv2D('conv1', 96, 3)
                       .BatchNorm('bn1')
                       .apply(activate)
-                      .Conv2D('conv2', 64, 3, padding='SAME', split=2)
+                      .Conv2D('conv2', 256, 3, padding='SAME', split=2)
                       .BatchNorm('bn2')
-                      .MaxPooling('pool2', 3, 2, padding='SAME')  # size=16
                       .apply(activate)
+                      .MaxPooling('pool2', 2, 2, padding='VALID')  # size=16
 
-                      .Conv2D('conv3', 96, 3)
+                      .Conv2D('conv3', 384, 3)
                       .BatchNorm('bn3')
                       .apply(activate)
+                      .MaxPooling('pool2', 2, 2, padding='VALID')  # size=8
 
-                      .Conv2D('conv4', 96, 3, split=2)
+                      .Conv2D('conv4', 384, 3, split=2)
                       .BatchNorm('bn4')
                       .apply(activate)
 
-                      .Conv2D('conv5', 64, 3, split=2)
+                      .Conv2D('conv5', 256, 3, split=2)
                       .BatchNorm('bn5')
-                      .MaxPooling('pool5', 3, 2, padding='SAME')    # size=8
                       .apply(activate)
+                      .MaxPooling('pool5', 2, 2, padding='VALID')  # size=4
 
-                      .FullyConnected('fc1', 1024, use_bias=False)
+                      .FullyConnected('fc1', 4096, use_bias=False)
                       .BatchNorm('bnfc1')
                       .apply(activate)
 
-                      .FullyConnected('fc2', 1024, use_bias=False)
+                      .FullyConnected('fc2', 4096, use_bias=False)
                       .BatchNorm('bnfc2')
                       .apply(activate)
 

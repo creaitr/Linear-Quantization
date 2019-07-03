@@ -12,13 +12,13 @@ from tensorpack.dataflow import BatchData
 from tensorpack.dataflow import PrefetchData
 
 
-class Cifar10:
+class Cifar100:
     def __init__(self):
         self.batch_size = 128
 
     def get_data(self, train_or_test):
         isTrain = train_or_test == 'train'
-        ds = dataset.Cifar10(train_or_test, dir='.')
+        ds = dataset.Cifar100(train_or_test, dir='.')
         pp_mean = ds.get_per_pixel_mean()
         if isTrain:
             augmentors = [
@@ -35,8 +35,8 @@ class Cifar10:
             ]
         ds = AugmentImageComponent(ds, augmentors)
         ds = BatchData(ds, self.batch_size, remainder=not isTrain)
-        #if isTrain:
-        #    ds = PrefetchData(ds, 3, 2)
+        if isTrain:
+            ds = PrefetchData(ds, 3, 2)
         return ds
 
     def load_data(self):

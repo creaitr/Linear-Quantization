@@ -99,18 +99,49 @@ class Model(ModelDesc):
                     x = resblock(x, channel, 1)
             return x
 
+        def resblock_idt(x, channel, stride):
+            def get_stem_full(x):
+                return (LinearWrap(x)
+                        .Conv2D('stem_conv_a', channel, 3, strides=(stride, stride))
+                        .BatchNorm('stem_bn')
+                        .apply(activate)
+                        .Conv2D('stem_conv_b', channel, 3, strides=(1, 1))())
+
+            channel_mismatch = channel != x.get_shape().as_list()[3]
+            if stride != 1 or channel_mismatch:
+                if stride != 1:
+                    shortcut = AvgPooling('avgpool', x, stride, stride)
+                else:
+                    shortcut = x
+                shortcut = Conv2D('shortcut', shortcut, channel, 1)
+            else:
+                shortcut = x
+            x = BatchNorm('bn', x)
+            x = activate(x)
+            stem = get_stem_full(x)
+            return shortcut + stem
+
+        def group_v2(x, name, channel, nr_block, stride):
+            with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
+                x = resblock_idt(x, channel, stride)
+            for i in range(2, nr_block + 1):
+                with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
+                    x = resblock_idt(x, channel, 1)
+            return x
+
         with remap_variables(new_get_variable), \
                 argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
                 argscope(Conv2D, use_bias=False, nl=tf.identity,
                          kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['scale']),
                                                                             mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
-                      .Conv2D('conv1', 16, 3)   # size=32
-                      .BatchNorm('bn1')
-                      .apply(activate)
-                      .apply(group, 'res2', 16, 2, 1)  # size=32
-                      .apply(group, 'res3', 32, 3, 2)  # size=16
-                      .apply(group, 'res4', 64, 3, 2)  # size=8
+                      .Conv2D('conv1', 64, 3)   # size=32
+                      #.BatchNorm('bn1')
+                      #.apply(activate)
+                      .apply(group_v2, 'res1', 64, 2, 1)  # size=32
+                      .apply(group_v2, 'res2', 128, 2, 2)  # size=16
+                      .apply(group_v2, 'res3', 256, 2, 2)  # size=8
+                      .apply(group_v2, 'res4', 512, 2, 2)  # size=4
                       .BatchNorm('last_bn')
                       .apply(activate)
                       .GlobalAvgPooling('gap')
