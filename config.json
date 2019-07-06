@@ -1,6 +1,6 @@
 {
   "model": "ResNet18",
-  "dataset": "Cifar10",
+  "dataset": "Cifar100",
   "logdir": "log",
   "gpu": "1",
   "save_init": "False",

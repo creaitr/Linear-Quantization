@@ -65,7 +65,7 @@ def get_train_config(config):
 
 if __name__ == '__main__':
     # set config
-    if sys.argv[1] == 'config':
+    if len(sys.argv) > 1 and sys.argv[1] == 'config':
         config_file = sys.argv[2]
         argv = sys.argv[3::] if len(sys.argv) > 3 else []
     else:
