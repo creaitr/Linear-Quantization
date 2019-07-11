@@ -281,16 +281,27 @@ class Model(ModelDesc):
         return opt
 
     def get_callbacks(self, ds_tst):
+        if self.config['num_gpu'] == 1:
+            runner = InferenceRunner(ds_tst,
+                                     [ScalarStats('cross_entropy_loss'),
+                                      ClassificationError('err_top1', summary_name='validation_error_top1'),
+                                      ClassificationError('err_top5', summary_name='validation_error_top5')])
+        elif self.config['num_gpu'] > 1:
+            runner = DataParallelInferenceRunner(ds_tst,
+                                                 [ScalarStats('cross_entropy_loss'),
+                                                  ClassificationError('err_top1', summary_name='validation_error_top1'),
+                                                  ClassificationError('err_top5', summary_name='validation_error_top5')],
+                                                 list(range(self.config['num_gpu'])))
         callbacks=[
             ModelSaver(max_to_keep=1),
-            InferenceRunner(ds_tst,
-                            [ScalarStats('cross_entropy_loss'),
-                             ClassificationError('err_top1', summary_name='validation_error_top1'),
-                             ClassificationError('err_top5', summary_name='validation_error_top5')]),
+            runner,
             MinSaver('validation_error_top1'),
             CkptModifier('min-validation_error_top1'),
             StatsChecker()
         ]
+
+
+
 
         # scheduling learning rate
         if self.optimizer_config['lr_schedule'] not in [None, 'None']:
