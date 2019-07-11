@@ -29,10 +29,11 @@ from .callbacks import InitSaver
 
 
 class Model(ModelDesc):
-    def __init__(self, config={}, size=32):
+    def __init__(self, config={}, size=32, nb_classes=10):
         self.config = config
 
         self.size = size
+        self.nb_classes = nb_classes
         self.load_config = config['load']
         self.initializer_config = config['initializer']
         self.activation = get_activation_func(config['activation'])
@@ -145,7 +146,7 @@ class Model(ModelDesc):
                       .BatchNorm('last_bn')
                       .apply(activate)
                       .GlobalAvgPooling('gap')
-                      .FullyConnected('fct', 10)())
+                      .FullyConnected('fct', self.nb_classes)())
         prob = tf.nn.softmax(logits, name='output')
 
         cost = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=label)

@@ -31,10 +31,10 @@ import Utils
 
 def get_train_config(config):
     # get dataset
-    size, ds_trn, ds_tst = getattr(Dataset, config['dataset'])().load_data()
+    size, nb_classes, ds_trn, ds_tst = getattr(Dataset, config['dataset'])().load_data(num_gpu=config['num_gpu'])
 
     # get the model
-    model = getattr(Models, config['model'])(config, size)
+    model = getattr(Models, config['model'])(config, size, nb_classes)
 
     # get callbacks such as ModelSaver
     callbacks, max_epoch = model.get_callbacks(ds_tst)
@@ -58,7 +58,8 @@ def get_train_config(config):
                                dataflow=ds_trn,
                                callbacks=callbacks,
                                max_epoch=max_epoch,
-                               session_init=session_init
+                               session_init=session_init,
+                               steps_per_epoch=100 if 'ImageNet' in config['model'] else None
                                )
     return train_config
 
@@ -88,6 +89,7 @@ if __name__ == '__main__':
     else:
         os.environ['CUDA_VISIBLE_DEVICES'] = config['gpu']
         num_gpu = max(get_num_gpu(), 1)
+    config['num_gpu'] = num_gpu
 
     # set log directory
     if config['logdir'] in [None, 'None', '']:

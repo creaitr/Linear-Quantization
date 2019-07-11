@@ -29,7 +29,7 @@ from .callbacks import InitSaver
 
 
 class Model(ModelDesc):
-    def __init__(self, config={}, size=32, nb_classes=10):
+    def __init__(self, config={}, size=32, nb_classes=1000):
         self.config = config
 
         self.size = size
@@ -69,43 +69,85 @@ class Model(ModelDesc):
         def activate(x):
             return qa(self.activation(x))
 
+        def resblock(x, channel, stride):
+            def get_stem_full(x):
+                return (LinearWrap(x)
+                        .Conv2D('stem_conv_a', channel, 3)
+                        .BatchNorm('stem_bn')
+                        .apply(activate)
+                        .Conv2D('stem_conv_b', channel, 3)())
+            
+            channel_mismatch = channel != x.get_shape().as_list()[3]
+            if stride != 1 or channel_mismatch:
+                if stride != 1:
+                    x = AvgPooling('avgpool', x, stride, stride)
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                shortcut = Conv2D('shortcut', x, channel, 1)
+                stem = get_stem_full(x)
+            else:
+                shortcut = x
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                stem = get_stem_full(x)
+            return shortcut + stem
+
+        def group(x, name, channel, nr_block, stride):
+            with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
+                x = resblock(x, channel, stride)
+            for i in range(2, nr_block + 1):
+                with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
+                    x = resblock(x, channel, 1)
+            return x
+
+        def resblock_idt(x, channel, stride):
+            def get_stem_full(x):
+                return (LinearWrap(x)
+                        .Conv2D('stem_conv_a', channel, 3, strides=(stride, stride))
+                        .BatchNorm('stem_bn')
+                        .apply(activate)
+                        .Conv2D('stem_conv_b', channel, 3, strides=(1, 1))())
+
+            channel_mismatch = channel != x.get_shape().as_list()[3]
+            if stride != 1 or channel_mismatch:
+                if stride != 1:
+                    shortcut = AvgPooling('avgpool', x, stride, stride)
+                else:
+                    shortcut = x
+                shortcut = Conv2D('shortcut', shortcut, channel, 1)
+            else:
+                shortcut = x
+            x = BatchNorm('bn', x)
+            x = activate(x)
+            stem = get_stem_full(x)
+            return shortcut + stem
+
+        def group_v2(x, name, channel, nr_block, stride):
+            with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
+                x = resblock_idt(x, channel, stride)
+            for i in range(2, nr_block + 1):
+                with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
+                    x = resblock_idt(x, channel, 1)
+            return x
+
         with remap_variables(new_get_variable), \
                 argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
                 argscope(Conv2D, use_bias=False, nl=tf.identity,
                          kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['scale']),
                                                                             mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
-                      .Conv2D('conv1', 96, 3)
-                      .BatchNorm('bn1')
+                      .Conv2D('conv1', 64, 7, strides=2)   # size=112
+                      .MaxPooling('pool1', pool_size=2, strides=2, padding="VALID")      # size=56
+                      #.BatchNorm('bn1')
+                      #.apply(activate)
+                      .apply(group_v2, 'res1', 64, 2, 1)  # size=56
+                      .apply(group_v2, 'res2', 128, 2, 2)  # size=28
+                      .apply(group_v2, 'res3', 256, 2, 2)  # size=14
+                      .apply(group_v2, 'res4', 512, 2, 2)  # size=7
+                      .BatchNorm('last_bn')
                       .apply(activate)
-                      .Conv2D('conv2', 256, 3, padding='SAME', split=2)
-                      .BatchNorm('bn2')
-                      .apply(activate)
-                      .MaxPooling('pool2', 2, 2, padding='VALID')  # size=16
-
-                      .Conv2D('conv3', 384, 3)
-                      .BatchNorm('bn3')
-                      .apply(activate)
-                      .MaxPooling('pool2', 2, 2, padding='VALID')  # size=8
-
-                      .Conv2D('conv4', 384, 3, split=2)
-                      .BatchNorm('bn4')
-                      .apply(activate)
-
-                      .Conv2D('conv5', 256, 3, split=2)
-                      .BatchNorm('bn5')
-                      .apply(activate)
-                      .MaxPooling('pool5', 2, 2, padding='VALID')  # size=4
-
-                      .FullyConnected('fc1', 4096, use_bias=False)
-                      .BatchNorm('bnfc1')
-                      .apply(activate)
-
-                      .FullyConnected('fc2', 4096, use_bias=False)
-                      .BatchNorm('bnfc2')
-                      .apply(activate)
-
-                      .FullyConnected('fct', self.nb_classes, use_bias=True)())
+                      .GlobalAvgPooling('gap')
+                      .FullyConnected('fct', self.nb_classes)())
         prob = tf.nn.softmax(logits, name='output')
 
         cost = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=label)
@@ -258,10 +300,11 @@ class Model(ModelDesc):
                 callbacks += [ScheduledHyperParamSetter('learning_rate', self.optimizer_config['lr_schedule'])]
         else:
             callbacks += [ScheduledHyperParamSetter('learning_rate',
-                                      [(1, 0.1), (82, 0.01), (123, 0.001), (300, 0.0002)])]
+                                      [(0, 0.1), (30, 0.01), (60, 0.001), (90, 0.0001), (100, 0.00001)])]
 
         if eval(self.config['save_init']):
             callbacks = [InitSaver()]
 
         max_epoch = int(self.optimizer_config['max_epoch'])
+        max_epoch = 105
         return callbacks, max_epoch

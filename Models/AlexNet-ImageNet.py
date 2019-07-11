@@ -29,7 +29,7 @@ from .callbacks import InitSaver
 
 
 class Model(ModelDesc):
-    def __init__(self, config={}, size=32, nb_classes=10):
+    def __init__(self, config={}, size=32, nb_classes=1000):
         self.config = config
 
         self.size = size
@@ -69,24 +69,33 @@ class Model(ModelDesc):
         def activate(x):
             return qa(self.activation(x))
 
+        @layer_register(log_shape=True)
+        def ZeroPadding(inputs=None, strides=(1, 1)):
+            paddings = [[0, 0],
+                        [strides[0], strides[0]],
+                        [strides[1], strides[1]],
+                        [0, 0]]
+            return tf.pad(inputs, paddings)
+
         with remap_variables(new_get_variable), \
                 argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
                 argscope(Conv2D, use_bias=False, nl=tf.identity,
                          kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['scale']),
                                                                             mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
-                      .Conv2D('conv1', 96, 3)
+                      .ZeroPadding('padding1', strides=(2, 2))
+                      .Conv2D('conv1', 96, 12, strides=4, padding='VALID')  # size=55
                       .BatchNorm('bn1')
                       .apply(activate)
-                      .Conv2D('conv2', 256, 3, padding='SAME', split=2)
+                      .Conv2D('conv2', 256, 5, padding='SAME', split=2)
                       .BatchNorm('bn2')
                       .apply(activate)
-                      .MaxPooling('pool2', 2, 2, padding='VALID')  # size=16
+                      .MaxPooling('pool2', 3, 2, padding='VALID')  # size=27
 
                       .Conv2D('conv3', 384, 3)
                       .BatchNorm('bn3')
                       .apply(activate)
-                      .MaxPooling('pool2', 2, 2, padding='VALID')  # size=8
+                      .MaxPooling('pool2', 3, 2, padding='VALID')  # size=13
 
                       .Conv2D('conv4', 384, 3, split=2)
                       .BatchNorm('bn4')
@@ -95,7 +104,7 @@ class Model(ModelDesc):
                       .Conv2D('conv5', 256, 3, split=2)
                       .BatchNorm('bn5')
                       .apply(activate)
-                      .MaxPooling('pool5', 2, 2, padding='VALID')  # size=4
+                      .MaxPooling('pool5', 3, 2, padding='VALID')  # size=6
 
                       .FullyConnected('fc1', 4096, use_bias=False)
                       .BatchNorm('bnfc1')
@@ -258,10 +267,12 @@ class Model(ModelDesc):
                 callbacks += [ScheduledHyperParamSetter('learning_rate', self.optimizer_config['lr_schedule'])]
         else:
             callbacks += [ScheduledHyperParamSetter('learning_rate',
-                                      [(1, 0.1), (82, 0.01), (123, 0.001), (300, 0.0002)])]
+                                      [(0, 0.02), (30, 0.002), (60, 0.0002), (80, 0.00002)])]
+            # base_lr = 0.01 * (256 / 128) = 0.02
 
         if eval(self.config['save_init']):
             callbacks = [InitSaver()]
 
         max_epoch = int(self.optimizer_config['max_epoch'])
+        max_epoch = 100
         return callbacks, max_epoch
