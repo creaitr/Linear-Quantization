@@ -74,7 +74,7 @@ class ImageNet:
             ds = dataset.ILSVRC12(self.datadir, name, shuffle=True)
             ds = AugmentImageComponent(ds, augmentors, copy=False)
             ds = MultiProcessRunnerZMQ(ds, parallel)
-            ds = BatchData(ds, self.gpu_batch, remainder=False)
+            ds = BatchData(ds, gpu_batch, remainder=False)
         else:
             ds = dataset.ILSVRC12Files(self.datadir, name, shuffle=False)
             aug = imgaug.AugmentorList(augmentors)
@@ -86,7 +86,7 @@ class ImageNet:
                 return im, cls
 
             ds = MultiThreadMapData(ds, parallel, mapf, buffer_size=2000, strict=True)
-            ds = BatchData(ds, self.gpu_batch, remainder=True)
+            ds = BatchData(ds, gpu_batch, remainder=True)
             ds = MultiProcessRunnerZMQ(ds, 1)
         return QueueInput(ds)
 
