@@ -68,8 +68,8 @@ def quantize_weight(bitW, name, opts):
                 if eval(opts['fix_max']):
                     #param_name = 'regularize_cost_internals/' + x.op.name.split('/W')[0] + '/maxW'
                     max_x = tf.stop_gradient(tf.get_variable('maxW', initializer=1.0, dtype=tf.float32))
-                    x = tf.clip_by_value(x, -max_x, max_x)
                     max_x *= float(opts['max_scale'])
+                    x = tf.clip_by_value(x, -max_x, max_x)
                 else:
                     max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
                 x = x / max_x

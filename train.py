@@ -59,7 +59,7 @@ def get_train_config(config):
                                callbacks=callbacks,
                                max_epoch=max_epoch,
                                session_init=session_init,
-                               steps_per_epoch=100 if 'ImageNet' in config['model'] else None
+                               steps_per_epoch=1281167//256 if 'ImageNet' in config['model'] else None
                                )
     return train_config
 

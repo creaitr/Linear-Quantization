@@ -59,6 +59,7 @@ if __name__ == '__main__':
                     maxW = np.amax(np.absolute(x))
                 elif maxW_name in keys:
                     maxW = dic[maxW_name]
+                    maxW *= config['quantizer']['W_opts']['max_scale']
                     maxW_temp = np.amax(np.absolute(x))
                 else:
                     maxW_name = 'regularize_cost_internals/' + maxW_name
@@ -68,7 +69,7 @@ if __name__ == '__main__':
                     else:
                         maxW = np.amax(np.absolute(x))
                 thresh = maxW * ratio
-
+                
                 if check_cond(key):
                     if eval(config['quantizer']['W_opts']['is_Lv']):
                         n = ((2 ** exBIT - 1) + (2 ** inBIT - 1)) / 2
@@ -92,7 +93,7 @@ if __name__ == '__main__':
                             cnt1 += 1
                     prob1 = cnt1 / x.shape[0] * 100
                     prob2 = cnt2 / x.shape[0] * 100
-                    txt = 'lv3: {:.2f}%/ lv7: {:.2f}%'.format(prob1, prob2)
+                    txt = 'lv3: {:.6f}%/ lv{}: {:.6f}%'.format(prob1, int(n*2 + 1), prob2)
                     # for total
                     total_weights += x.shape[0]
                     total_in_prob += cnt1
@@ -118,14 +119,13 @@ if __name__ == '__main__':
                 plt.savefig(file_path)
                 plt.close()
 
-        with open(logdir + '/result_dict.txt', 'w') as file:
-            file.write(str(result_dic))
         maxQ = max(list(result_dic.keys()))
         thresh = maxQ * ratio
         part1_keys = [key for key in result_dic.keys() if np.absolute(key) < thresh]
         part1_vals = [result_dic[key] for key in result_dic.keys() if np.absolute(key) < thresh]
         part2_keys = [key for key in result_dic.keys() if np.absolute(key) > thresh]
         part2_vals = [result_dic[key] for key in result_dic.keys() if np.absolute(key) > thresh]
+        
         #print(part1_keys); print(part1_vals)
         plt.bar(part1_keys, part1_vals, color='blue')
         plt.bar(part2_keys, part2_vals, color='red')
@@ -148,4 +148,11 @@ if __name__ == '__main__':
         file_path = dist_path + '/quantized.png'
         plt.savefig(file_path)
         plt.close()
+
+        with open(logdir + '/dist/result_dict.txt', 'w') as file:
+            file.write(str(result_dic))
+            file.write('\n\n')
+            file.write('total in prob: {}\n'.format(total_in_prob / total_weights * 100))
+            file.write('total out prob: {}'.format(total_out_prob / total_weights * 100))
+
 

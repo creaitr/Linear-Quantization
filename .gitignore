@@ -107,6 +107,7 @@ venv.bak/
 train_log/
 trained_log/
 temp/
+Experiments/
 
 # Cifa10 dataset folder
 cifar-10-batches-py/

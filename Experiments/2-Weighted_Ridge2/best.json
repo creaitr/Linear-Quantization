@@ -1,1 +1,0 @@
-{"cross_entropy_loss": 0.07038179785013199, "train_error_top5": 6.772641540919722e-07, "train_error_top1": 0.021274149417877197, "global_step": 18330, "validation_error_top1": 0.1045, "epoch_num": 47, "validation_error_top5": 0.0039, "validation_cross_entropy_loss": 0.36486226320266724}

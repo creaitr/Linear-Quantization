@@ -14,7 +14,7 @@ from tensorpack.dataflow import AugmentImageComponent
 from tensorpack.dataflow import BatchData
 from tensorpack.dataflow import PrefetchData
 from tensorpack.dataflow import MultiProcessRunnerZMQ, MultiThreadMapData
-from tensorpack.input_source import QueueInput, StagingInput
+from tensorpack import QueueInput, StagingInput
 
 
 def fbresnet_augmentor(isTrain):
@@ -31,9 +31,9 @@ def fbresnet_augmentor(isTrain):
             # Removing brightness/contrast/saturation does not have a significant effect on accuracy.
             # Removing lighting leads to a tiny drop in accuracy.
             imgaug.RandomOrderAug(
-                [imgaug.BrightnessScale((0.6, 1.4), clip=False),
-                 imgaug.Contrast((0.6, 1.4), rgb=False, clip=False),
-                 imgaug.Saturation(0.4, rgb=False),
+                [#imgaug.BrightnessScale((0.6, 1.4), clip=False),
+                 #imgaug.Contrast((0.6, 1.4), rgb=False, clip=False),
+                 #imgaug.Saturation(0.4, rgb=False),
                  # rgb-bgr conversion for the constants copied from fb.resnet.torch
                  imgaug.Lighting(0.1,
                                  eigval=np.asarray(
@@ -68,14 +68,14 @@ class ImageNet:
         augmentors = fbresnet_augmentor(isTrain)
         assert isinstance(augmentors, list)
 
-        parallel = 8
+        parallel = 15
 
         if isTrain:
-            ds = dataset.ILSVRC12(self.datadir, name, shuffle=True)
+            ds = dataset.ILSVRC12(self.datadir, name, shuffle=True, dir_structure='train')
             ds = AugmentImageComponent(ds, augmentors, copy=False)
             ds = MultiProcessRunnerZMQ(ds, parallel)
             ds = BatchData(ds, gpu_batch, remainder=False)
-            ds = QueueInput(ds)
+            #ds = QueueInput(ds)
         else:
             ds = dataset.ILSVRC12Files(self.datadir, name, shuffle=False)
             aug = imgaug.AugmentorList(augmentors)

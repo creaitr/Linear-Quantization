@@ -26,7 +26,7 @@ class Weighted_Ridge1():
         ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
 
         def clipped_Lasso(x, threshold, max_x):
-            return tf.clip_by_value(tf.abs(x), threshold, max_x)
+            return tf.clip_by_value(tf.abs(x), threshold, max_x * 10)
 
         def func(x):
             if 'conv1' not in x.op.name and 'fct' not in x.op.name:
