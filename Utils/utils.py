@@ -17,6 +17,24 @@ def find_max(dic={}, config={}):
     return dic
 
 
+def find_99th(dic={}, config={}):
+    keys = list(dic.keys())
+    for key in keys:
+        if '/W:' in key and 'conv1' not in key and 'fct' not in key:
+            name_scope, device = key.split('/W')
+            max_val_name = name_scope + '/maxW' + device
+
+            x = np.absolute(dic[key])
+            x = x.flatten()
+            x.sort()
+            n = x.shape[0]
+            n_99th = int((n * 0.995) - 1)
+            max_val = x[n_99th]
+
+            dic[max_val_name] = max_val
+    return dic
+
+
 def make_mask(dic={}, config=[]):
     inBIT, exBIT = eval(config['quantizer']['W_opts']['threshold_bit'])
     ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
