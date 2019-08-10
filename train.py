@@ -48,6 +48,8 @@ def get_train_config(config):
             saved_model = Utils.find_max(saved_model, config['load'])
         elif eval(config['load']['find_99th']):
             saved_model = Utils.find_99th(saved_model, config['load'])
+        if eval(config['load']['pruning']):
+            saved_model = Utils.pruning(saved_model, config)
         if eval(config['load']['make_mask']):
             saved_model = Utils.make_mask(saved_model, config)
         if eval(config['load']['clustering']):

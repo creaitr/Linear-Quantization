@@ -28,10 +28,45 @@ def find_99th(dic={}, config={}):
             x = x.flatten()
             x.sort()
             n = x.shape[0]
-            n_99th = int((n * 0.995) - 1)
+            n_99th = int((n * 0.9995) - 1)
             max_val = x[n_99th]
-
+            max_x = np.max(x); print(key); print("99th: {} / max: {} / {}%".format(max_val, max_x, max_val / max_x * 100))
             dic[max_val_name] = max_val
+    return dic
+
+
+def pruning(dic={}, config={}):
+    inBIT, exBIT = eval(config['quantizer']['W_opts']['threshold_bit'])
+    ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
+
+    keys = list(dic.keys())
+    for key in keys:
+        if '/W:' in key and 'conv1' not in key and 'fct' not in key:
+            name_scope, device = key.split('/W')
+
+            max_val_name = name_scope + '/maxW' + device
+            if max_val_name not in keys:
+                temp = 'regularize_cost_internals/' + max_val_name
+                max_val = dic[temp]
+                del dic[temp]
+                dic[max_val_name] = max_val
+            max_val = dic[max_val_name]
+
+            threshold = max_val * ratio
+            up_thresh = threshold * 1.2
+            dw_thresh = threshold * 0.999
+
+            x = dic[key]
+
+            mask = np.where(np.logical_and(x_bas >= dw_thresh, x_abs < up_thresh), np.float32(1.), np.float32(0.))
+            mask *= threshold
+            x_new = np.where(mask == np.float32(threshold), mask, x)
+
+            mask = np.where(np.logical_and(x_bas <= -dw_thresh, x_abs > -up_thresh), np.float32(1.), np.float32(0.))
+            mask *= -threshold
+            x_new = np.where(mask == np.float32(-threshold), mask, x_new)
+            
+            dic[key] = x_new
     return dic
 
 

@@ -10,6 +10,7 @@
     "find_99th": "False",
     "add_reg_prefix": "False",
     "del_reg_prefix": "False",
+    "pruning": "False",
     "make_mask": "False",
     "clustering": "False"
   },
