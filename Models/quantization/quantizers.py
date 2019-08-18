@@ -193,9 +193,13 @@ def ternarize(x, thresh=0.05):
     def _sign_mask(x):
         return tf.sign(x) * mask_z, lambda dy: dy
 
-    w = _sign_mask(x)
+    w1 = _sign_mask(x)
 
-    w = w * mask_np
+    w2 = tf.multiply(w1, mask_np, name='QW')
 
-    tf.summary.histogram(w.name, w)
-    return w
+    #w_loss = 0.5 * tf.reduce_sum(tf.square(w1))
+    #tf.add_to_collection('regularization_losses', w_loss)
+
+    tf.summary.histogram(w2.name, w2)
+    return w2
+

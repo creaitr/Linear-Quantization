@@ -58,13 +58,13 @@ def pruning(dic={}, config={}):
 
             x = dic[key]
 
-            mask = np.where(np.logical_and(x_bas >= dw_thresh, x_abs < up_thresh), np.float32(1.), np.float32(0.))
-            mask *= threshold
-            x_new = np.where(mask == np.float32(threshold), mask, x)
+            mask = np.where(np.logical_and(x >= threshold, x <= up_thresh), np.float32(1.), np.float32(0.))
+            mask *= dw_thresh
+            x_new = np.where(mask == np.float32(dw_thresh), mask, x)
 
-            mask = np.where(np.logical_and(x_bas <= -dw_thresh, x_abs > -up_thresh), np.float32(1.), np.float32(0.))
-            mask *= -threshold
-            x_new = np.where(mask == np.float32(-threshold), mask, x_new)
+            mask = np.where(np.logical_and(x <= -threshold, x >= -up_thresh), np.float32(1.), np.float32(0.))
+            mask *= -dw_thresh
+            x_new = np.where(mask == np.float32(-dw_thresh), mask, x_new)
             
             dic[key] = x_new
     return dic
@@ -90,9 +90,8 @@ def make_mask(dic={}, config=[]):
             threshold = max_val * ratio
 
             mask_name = name_scope + '/maskW' + device
-            if mask_name not in keys:
-                mask = np.where(np.absolute(dic[key]) < threshold, np.float32(1.), np.float32(0.))
-                dic[mask_name] = mask
+            mask = np.where(np.absolute(dic[key]) < threshold, np.float32(1.), np.float32(0.))
+            dic[mask_name] = mask
     return dic
 
 

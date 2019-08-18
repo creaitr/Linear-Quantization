@@ -110,16 +110,19 @@ class Model(ModelDesc):
 
             channel_mismatch = channel != x.get_shape().as_list()[3]
             if stride != 1 or channel_mismatch:
+                #shortcut = tf.concat([x[::, 0::2, 0::2, ::], x[::, 1::2, 1::2, ::]], -1)
+                x = BatchNorm('bn', x)
+                x = activate(x)
                 if stride != 1:
-                    shortcut = AvgPooling('avgpool', x, stride, stride)
+                    shortcut = Conv2D('shortcut', x, channel, 1, strides=(stride, stride))
                 else:
-                    shortcut = x
-                shortcut = Conv2D('shortcut', shortcut, channel, 1)
+                    shortcut = Conv2D('shortcut', x, channel, 1)
+                stem = get_stem_full(x)
             else:
                 shortcut = x
-            x = BatchNorm('bn', x)
-            x = activate(x)
-            stem = get_stem_full(x)
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                stem = get_stem_full(x)
             return shortcut + stem
 
         def group_v2(x, name, channel, nr_block, stride):
@@ -156,6 +159,7 @@ class Model(ModelDesc):
         if self.regularizer_config['name'] not in [None, 'None']:
             reg_func = getattr(regularizers, self.regularizer_config['name'])().get_func(self.regularizer_config)
             reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), regularize_cost('.*/W', reg_func), name='reg_cost')
+            #reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), regularize_cost_from_collection(), name='reg_cost')
             total_cost = tf.add_n([cost, reg_cost], name='total_cost')
         else:
             total_cost = cost
