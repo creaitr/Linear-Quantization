@@ -82,13 +82,49 @@ def quantize_weight(bitW, name, opts):
                 else:  # midrise
                     x = quantize_midrise(x, bitW - 1)
 
-                w_s = tf.get_variable('scale_Ws', initializer=1.0, dtype=tf.float32)
-                return tf.multiply(w_s * max_x, x)
+                #w_s = tf.get_variable('scale_Ws', initializer=1.0, dtype=tf.float32)
+                return tf.multiply(max_x, x)
             return qw
 
     # 2. Centroid Quantization
-    elif name == 'cluster':
-        return tf.identity
+    elif name == 'cent':
+
+        if type(opts['threshold_bit']) == str:
+            inBIT, exBIT = eval(opts['threshold_bit'])
+        else:
+            inBIT, exBIT = opts['threshold_bit']
+        ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
+        
+        def qw(x):
+            if bitW == 32:
+                return x
+
+            if eval(opts['fix_max']):
+                #param_name = 'regularize_cost_internals/' + x.op.name.split('/W')[0] + '/maxW'
+                max_x = tf.stop_gradient(tf.get_variable('maxW', initializer=1.0, dtype=tf.float32))
+                max_x *= float(opts['max_scale'])
+                x = tf.clip_by_value(x, -max_x, max_x)
+            else:
+                max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+
+            thresh = ratio * max_x
+            thresh2 = thresh * 0.999
+
+            mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.ones_initializer, dtype=tf.float32)
+            
+            x = tf.where(tf.equal(1.0, mask), tf.clip_by_value(x, -thresh2, thresh2), x)
+                
+            x = x / max_x
+
+            if eval(opts['is_Lv']): # midtread
+                assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
+                x = quantize_odd(x, bitW)
+            else:  # midrise
+                x = quantize_midrise(x, bitW - 1)
+
+            w_s = tf.get_variable('scale_Ws', initializer=1.0, dtype=tf.float32)
+            return tf.multiply(w_s * max_x, x)
+        return qw
 
     # 3. Dynamic Network Surgery
     elif name == 'dns':

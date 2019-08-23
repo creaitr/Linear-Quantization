@@ -186,19 +186,20 @@ class Model(ModelDesc):
                 inBIT, exBIT = eval(self.quantizer_config['W_opts']['threshold_bit'])
                 ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
 
-                if eval(self.quantizer_config['W_opts']['fix_max']):
-                    with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
-                        #max_x_name = 'post_op_internals/' + name_scope + '/maxW'
-                        #max_x_name = name_scope + '/maxW'
-                        max_x = tf.stop_gradient(tf.get_variable('maxW', shape=(), initializer=tf.ones_initializer, dtype=tf.float32))
-                        max_x *= float(self.quantizer_config['W_opts']['max_scale'])
-                else:
-                    max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+                with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
+                    if eval(self.quantizer_config['W_opts']['fix_max']):
+                        with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
+                            #max_x_name = 'post_op_internals/' + name_scope + '/maxW'
+                            #max_x_name = name_scope + '/maxW'
+                            max_x = tf.stop_gradient(tf.get_variable('maxW', shape=(), initializer=tf.ones_initializer, dtype=tf.float32))
+                            max_x *= float(self.quantizer_config['W_opts']['max_scale'])
+                    else:
+                        max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
 
-                thresh = max_x * ratio * 0.999
+                        thresh = max_x * ratio * 0.999
 
-                mask_name = name_scope + '/maskW'
-                mask = tf.get_variable(mask_name, shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
+                        mask_name = name_scope + '/maskW'
+                        mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
 
                 new_x = tf.where(tf.equal(1.0, mask), tf.clip_by_value(x, -thresh, thresh), x)
                 return tf.assign(x, new_x, use_locking=False).op
@@ -274,6 +275,9 @@ class Model(ModelDesc):
         opt = get_optimizer(self.optimizer_config)
 
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['centralized']):
+            self.add_centralizing_update()
+            opt = optimizer.PostProcessOptimizer(opt, self.centralizing)
+        if self.quantizer_config['name'] == 'cent':
             self.add_centralizing_update()
             opt = optimizer.PostProcessOptimizer(opt, self.centralizing)
         if self.quantizer_config['name'] == 'cluster' and eval(self.load_config['clustering']):

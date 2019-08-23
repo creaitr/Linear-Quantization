@@ -7,13 +7,16 @@ def find_max(dic={}, config={}):
         if '/W:' in key and 'conv1' not in key and 'fct' not in key:
             name_scope, device = key.split('/W')
             max_val_name = name_scope + '/maxW' + device
+            max_val_name2 = max_val_name
 
             if eval(config['add_reg_prefix']) == True:
                 max_val_name = 'regularize_cost_internals/' + max_val_name
 
-            if max_val_name not in keys:
-                max_val = np.amax(np.absolute(dic[key]))
-                dic[max_val_name] = max_val
+            max_val = np.amax(np.absolute(dic[key]))
+            dic[max_val_name] = max_val
+            if max_val_name != max_val_name2:
+                dic[max_val_name2] = max_val
+                
     return dic
 
 
