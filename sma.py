@@ -1,11 +1,15 @@
 import os
+import sys
 import json
 import numpy as np
 import matplotlib.pyplot as plt
 
 
 if __name__ == '__main__':
-    path = './train_log'
+    if len(sys.argv) == 2:
+        path = sys.argv[1]
+    else:
+        path = './train_log'
     #path = './temp'
     for logdir in os.listdir(path):
         logdir = path + '/' + logdir
