@@ -77,7 +77,10 @@ def quantize_weight(bitW, name, opts):
                 if eval(opts['is_Lv']): # midtread
                     assert bitW != 1, '[ConfigError]Cannot quantize weight to 1-bit with midtread method'
                     if bitW == 3:
-                        return ternarize(x)
+                        if eval(opts['fix_max']):
+                            return ternarize_fixmax(x, max_x)
+                        else:
+                            return ternarize(x)
                     x = quantize_odd(x, bitW)
                 else:  # midrise
                     x = quantize_midrise(x, bitW - 1)
@@ -239,3 +242,33 @@ def ternarize(x, thresh=0.05):
     tf.summary.histogram(w2.name, w2)
     return w2
 
+
+def ternarize_fixmax(x, max_x):
+
+    thresh = 0.05
+    
+    shape = x.get_shape()
+
+    thre_x = max_x * thresh
+
+    w_s = tf.get_variable('Ws', initializer=1.0, dtype=tf.float32)
+
+    tf.summary.scalar(w_s.op.name + '-summary', w_s)
+
+    mask = tf.ones(shape)
+    mask_s = tf.where(tf.logical_or(x > thre_x, x < -thresh), tf.ones(shape) * w_s, mask)
+    mask_z = tf.where((x < thre_x) & (x > - thre_x), tf.zeros(shape), mask)
+
+    @tf.custom_gradient
+    def _sign_mask(x):
+        return tf.sign(x) * mask_z, lambda dy: dy
+
+    w1 = _sign_mask(x)
+
+    w2 = tf.multiply(w1, mask_s, name='QW')
+
+    #w_loss = 0.5 * tf.reduce_sum(tf.square(w1))
+    #tf.add_to_collection('regularization_losses', w_loss)
+
+    tf.summary.histogram(w2.name, w2)
+    return w2
