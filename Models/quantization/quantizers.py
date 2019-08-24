@@ -125,8 +125,8 @@ def quantize_weight(bitW, name, opts):
             else:  # midrise
                 x = quantize_midrise(x, bitW - 1)
 
-            w_s = tf.get_variable('scale_Ws', initializer=1.0, dtype=tf.float32)
-            return tf.multiply(w_s * max_x, x)
+            #w_s = tf.get_variable('scale_Ws', initializer=1.0, dtype=tf.float32)
+            return tf.multiply(max_x, x)
         return qw
 
     # 3. Dynamic Network Surgery
@@ -169,8 +169,8 @@ def quantize_weight(bitW, name, opts):
             else:  # midrise
                 x = quantize_midrise(x, bitW - 1)
 
-            w_s = tf.get_variable('scale_Ws', initializer=1.0, dtype=tf.float32)
-            return tf.multiply(w_s * max_x, x)
+            #w_s = tf.get_variable('scale_Ws', initializer=1.0, dtype=tf.float32)
+            return tf.multiply(max_x, x)
 
         return qw
 
