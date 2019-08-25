@@ -14,11 +14,16 @@ if __name__ == '__main__':
     for logdir in os.listdir(path):
         logdir = path + '/' + logdir
 
-        with open(logdir + '/best.json') as f:
-            best = json.load(f)
+        #with open(logdir + '/best.json') as f:
+        #    best = json.load(f)
 
         with open(logdir + '/stats.json') as f:
             stats = json.load(f)
+
+        errors = [x['validation_error_top1'] for x in stats]
+        idx = errors.index(min(errors))
+
+        best = stats[idx]
 
         errors1 = [x['validation_error_top1'] for x in stats]
         errors5 = [x['validation_error_top5'] for x in stats]

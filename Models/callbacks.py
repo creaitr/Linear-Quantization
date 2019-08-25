@@ -3,6 +3,7 @@ import six
 import json
 from datetime import datetime
 
+import numpy as np
 import tensorflow as tf
 
 # tensorpack
