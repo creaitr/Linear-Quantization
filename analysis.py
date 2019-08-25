@@ -162,3 +162,13 @@ if __name__ == '__main__':
             file.write('total out prob: {}'.format(total_out_prob / total_weights * 100))
 
 
+        best = {}
+        with open(logdir + '/best.json') as f:
+            best = json.load(f)
+
+        best['in_prob'] = total_in_prob / total_weights * 100
+        best['out_prob'] = total_out_prob / total_weights * 100
+
+        with open(logdir + '/best.json', 'w') as outfile:
+            json.dump(best, outfile)
+
