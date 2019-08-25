@@ -196,10 +196,10 @@ class Model(ModelDesc):
                     else:
                         max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
 
-                        thresh = max_x * ratio * 0.999
+                    thresh = max_x * ratio * 0.999
 
-                        mask_name = name_scope + '/maskW'
-                        mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
+                    mask_name = name_scope + '/maskW'
+                    mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
 
                 new_x = tf.where(tf.equal(1.0, mask), tf.clip_by_value(x, -thresh, thresh), x)
                 return tf.assign(x, new_x, use_locking=False).op
