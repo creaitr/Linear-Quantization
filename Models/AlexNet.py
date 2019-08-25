@@ -143,11 +143,10 @@ class Model(ModelDesc):
 
                 with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
                     if eval(self.quantizer_config['W_opts']['fix_max']):
-                        with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
-                            #max_x_name = 'post_op_internals/' + name_scope + '/maxW'
-                            #max_x_name = name_scope + '/maxW'
-                            max_x = tf.stop_gradient(tf.get_variable('maxW', shape=(), initializer=tf.ones_initializer, dtype=tf.float32))
-                            max_x *= float(self.quantizer_config['W_opts']['max_scale'])
+                        #max_x_name = 'post_op_internals/' + name_scope + '/maxW'
+                        #max_x_name = name_scope + '/maxW'
+                        max_x = tf.stop_gradient(tf.get_variable('maxW', shape=(), initializer=tf.ones_initializer, dtype=tf.float32))
+                        max_x *= float(self.quantizer_config['W_opts']['max_scale'])
                     else:
                         max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
 
