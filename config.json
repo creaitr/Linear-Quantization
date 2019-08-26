@@ -12,6 +12,7 @@
     "del_reg_prefix": "False",
     "pruning": "False",
     "make_mask": "False",
+    "mask_load": null,
     "clustering": "False"
   },
   "initializer": {

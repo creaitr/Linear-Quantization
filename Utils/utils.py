@@ -74,6 +74,9 @@ def pruning(dic={}, config={}):
 
 
 def make_mask(dic={}, config=[]):
+    if config['load']['mask_load'] != None:
+        mask_dic = dict(np.load(config['load']['name']))
+    
     inBIT, exBIT = eval(config['quantizer']['W_opts']['threshold_bit'])
     ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
 
@@ -93,7 +96,10 @@ def make_mask(dic={}, config=[]):
             threshold = max_val * ratio
 
             mask_name = name_scope + '/maskW' + device
-            mask = np.where(np.absolute(dic[key]) < threshold, np.float32(1.), np.float32(0.))
+            if config['load']['mask_load'] == None:
+                mask = np.where(np.absolute(dic[key]) < threshold, np.float32(1.), np.float32(0.))
+            else:
+                mask = np.where(np.absolute(mask_dic[key]) < threshold, np.float32(1.), np.float32(0.))
             dic[mask_name] = mask
     return dic
 
