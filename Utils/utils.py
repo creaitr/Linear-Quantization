@@ -75,7 +75,7 @@ def pruning(dic={}, config={}):
 
 def make_mask(dic={}, config=[]):
     if config['load']['mask_load'] != None:
-        mask_dic = dict(np.load(config['load']['name']))
+        mask_dic = dict(np.load(config['load']['mask_load']))
     
     inBIT, exBIT = eval(config['quantizer']['W_opts']['threshold_bit'])
     ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
