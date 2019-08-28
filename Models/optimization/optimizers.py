@@ -8,4 +8,6 @@ def get_optimizer(config):
         opt = tf.train.GradientDescentOptimizer(lr)
     elif config['name'] == 'Momentum':
         opt = tf.train.MomentumOptimizer(lr, 0.9)
+    elif config['name'] == 'NesterovAG':
+        opt = tf.train.MomentumOptimizer(lr, 0.9, use_nesterov=True)
     return opt
