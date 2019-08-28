@@ -205,6 +205,24 @@ class Model(ModelDesc):
 
         self.centralizing = func
 
+    def add_stop_grad(self):
+        def func(grad, val):
+            val_name = val.op.name
+            if '/W' in val_name and 'conv1' not in val_name and 'fct' not in val_name:
+                name_scope, device_scope = val.op.name.split('/W')
+                
+                with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
+                    mask_name = name_scope + '/maskW'
+                    mask = tf.get_variable('maskW', shape=val.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
+
+                    zero_grad = tf.zeros(shape=grad.shape)
+
+                    new_grad = tf.where(tf.equal(1.0, mask), zero_grad, grad)
+                    
+                return new_grad
+
+        self.stop_grad = func
+
     def add_clustering_update(self, n_ls):
         def func(grad, val):
             val_name = val.op.name
@@ -273,6 +291,9 @@ class Model(ModelDesc):
     def optimizer(self):
         opt = get_optimizer(self.optimizer_config)
 
+        if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['stop_grad']):
+            self.add_stop_grad()
+            opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.stop_grad)])
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['centralized']):
             self.add_centralizing_update()
             opt = optimizer.PostProcessOptimizer(opt, self.centralizing)

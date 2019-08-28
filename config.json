@@ -37,6 +37,7 @@
       "max_scale": 1.0,
       "is_Lv": "True",
       "centralized": "False",
+      "stop_grad": "False",
       "pruning": "False",
       "threshold_bit": "[2,2]"
     },
