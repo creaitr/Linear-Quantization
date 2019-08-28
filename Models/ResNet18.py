@@ -200,7 +200,7 @@ class Model(ModelDesc):
                     mask_name = name_scope + '/maskW'
                     mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
 
-                new_x = tf.where(tf.equal(1.0, mask), tf.clip_by_value(x, -thresh, thresh), x)
+                new_x = tf.where(tf.equal(1.0, mask), tf.clip_by_value(x, -thresh, thresh), tf.clip_by_value(x, -max_x, max_x))
                 return tf.assign(x, new_x, use_locking=False).op
 
         self.centralizing = func
