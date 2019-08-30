@@ -1,18 +1,18 @@
 {
   "model": "AlexNet",
   "dataset": "Cifar100",
-  "logdir": "AlexNet_Q_WTA4",
+  "logdir": "AlexNet_SQ_W11LA4",
   "gpu": "0",
   "save_init": "False",
   "load": {
     "name": "pretrn_relu1_alexnet.npz",
-    "find_max": "False",
+    "find_max": "True",
     "find_99th": "False",
     "add_reg_prefix": "False",
     "del_reg_prefix": "False",
     "pruning": "False",
-    "make_mask": "False",
-    "mask_load": null,
+    "make_mask": "True",
+    "mask_load": "quantized_11l_alexnet.npz",
     "clustering": "False"
   },
   "initializer": {
@@ -31,12 +31,12 @@
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 3,
+    "BITW": 11,
     "W_opts": {
-      "fix_max": "False",
+      "fix_max": "True",
       "max_scale": 1.0,
       "is_Lv": "True",
-      "centralized": "False",
+      "centralized": "True",
       "stop_grad": "False",
       "pruning": "False",
       "threshold_bit": "[2,3]"

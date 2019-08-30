@@ -1,14 +1,14 @@
 {
-  "model": "AlexNet",
+  "model": "ResNet18",
   "dataset": "Cifar100",
-  "logdir": "AlexNet_Q_WTA4",
+  "logdir": "ResNet18_Q_W7LA4_WR22-1",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "pretrn_relu1_alexnet.npz",
-    "find_max": "False",
+    "name": "pretrn_relu1_resnet18.npz",
+    "find_max": "True",
     "find_99th": "False",
-    "add_reg_prefix": "False",
+    "add_reg_prefix": "True",
     "del_reg_prefix": "False",
     "pruning": "False",
     "make_mask": "False",
@@ -21,25 +21,25 @@
   },
   "activation": "relu1",
   "regularizer": {
-    "name": "Ridge",
-    "lmbd": 0.02,
+    "name": "Weighted_Ridge1",
+    "lmbd": 0.0002,
     "sub_reg": {
-      "relative_lmbd": 2.0,
+      "relative_lmbd": 0.5,
       "fix_max": "True",
-      "sub_ratio": [2,3]
+      "sub_ratio": [2,2]
     }
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 3,
+    "BITW": 7,
     "W_opts": {
-      "fix_max": "False",
+      "fix_max": "True",
       "max_scale": 1.0,
       "is_Lv": "True",
       "centralized": "False",
       "stop_grad": "False",
       "pruning": "False",
-      "threshold_bit": "[2,3]"
+      "threshold_bit": "[2,2]"
     },
     "BITA": 4,
     "BITG": 32
@@ -47,7 +47,7 @@
   "optimizer": {
     "name": "NesterovAG",
     "lr": 0.01,
-    "lr_schedule": [[0, 0.01], [101, 0.001], [201, 0.0001], [301, 0.00001]],
+    "lr_schedule": [[0, 0.1], [101, 0.01], [201, 0.001], [301, 0.0001]],
     "max_epoch": 300
   }
 }

@@ -6,7 +6,7 @@
   "save_init": "False",
   "load": {
     "name": "pretrn_relu1_resnet18.npz",
-    "find_max": "True",
+    "find_max": "False",
     "find_99th": "False",
     "add_reg_prefix": "False",
     "del_reg_prefix": "False",
