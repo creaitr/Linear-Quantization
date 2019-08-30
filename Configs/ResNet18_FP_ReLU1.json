@@ -1,14 +1,14 @@
 {
-  "model": "AlexNet",
+  "model": "ResNet18",
   "dataset": "Cifar100",
-  "logdir": "AlexNet_WR23",
+  "logdir": "ResNet18_FP_ReLU1",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "pretrn_alexnet.npz",
-    "find_max": "True",
+    "name": "init_resnet18.npz",
+    "find_max": "False",
     "find_99th": "False",
-    "add_reg_prefix": "True",
+    "add_reg_prefix": "False",
     "del_reg_prefix": "False",
     "pruning": "False",
     "make_mask": "False",
@@ -19,12 +19,12 @@
     "scale": 2.0,
     "mode": "fan_in"
   },
-  "activation": "relu",
+  "activation": "relu1",
   "regularizer": {
-    "name": "Weighted_Ridge1",
-    "lmbd": 0.02,
+    "name": "Ridge",
+    "lmbd": 0.0002,
     "sub_reg": {
-      "relative_lmbd": 4.0,
+      "relative_lmbd": 2.0,
       "fix_max": "True",
       "sub_ratio": [2,3]
     }
@@ -46,8 +46,8 @@
   },
   "optimizer": {
     "name": "NesterovAG",
-    "lr": 0.01,
-    "lr_schedule": [[0, 0.01], [101, 0.001], [201, 0.0001], [301, 0.00001]],
+    "lr": 0.1,
+    "lr_schedule": [[0, 0.1], [101, 0.01], [201, 0.001], [301, 0.0001]],
     "max_epoch": 300
   }
 }

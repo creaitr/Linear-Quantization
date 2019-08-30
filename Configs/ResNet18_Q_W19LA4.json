@@ -1,14 +1,14 @@
 {
   "model": "ResNet18",
   "dataset": "Cifar100",
-  "logdir": "ResNet18_WR23",
+  "logdir": "ResNet18_Q_W19LA4",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "pretrn_resnet18.npz",
+    "name": "pretrn_relu1_resnet18.npz",
     "find_max": "True",
     "find_99th": "False",
-    "add_reg_prefix": "True",
+    "add_reg_prefix": "False",
     "del_reg_prefix": "False",
     "pruning": "False",
     "make_mask": "False",
@@ -19,19 +19,19 @@
     "scale": 2.0,
     "mode": "fan_in"
   },
-  "activation": "relu",
+  "activation": "relu1",
   "regularizer": {
-    "name": "Weighted_Ridge1",
+    "name": "Ridge",
     "lmbd": 0.0002,
     "sub_reg": {
-      "relative_lmbd": 16.0,
+      "relative_lmbd": 2.0,
       "fix_max": "True",
-      "sub_ratio": [2,4]
+      "sub_ratio": [2,3]
     }
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 32,
+    "BITW": 19,
     "W_opts": {
       "fix_max": "True",
       "max_scale": 1.0,
@@ -39,9 +39,9 @@
       "centralized": "False",
       "stop_grad": "False",
       "pruning": "False",
-      "threshold_bit": "[2,4]"
+      "threshold_bit": "[2,3]"
     },
-    "BITA": 32,
+    "BITA": 4,
     "BITG": 32
   },
   "optimizer": {
