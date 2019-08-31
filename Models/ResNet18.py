@@ -215,9 +215,9 @@ class Model(ModelDesc):
                     mask_name = name_scope + '/maskW'
                     mask = tf.get_variable('maskW', shape=val.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
 
-                    zero_grad = tf.zeros(shape=grad.shape)
+                    #zero_grad = tf.zeros(shape=grad.shape)
 
-                    new_grad = tf.where(tf.equal(1.0, mask), zero_grad, grad)
+                    new_grad = tf.where(tf.equal(1.0, mask), grad, grad * 0.1)
                     
                 return new_grad
 
