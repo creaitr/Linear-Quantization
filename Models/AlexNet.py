@@ -245,7 +245,15 @@ class Model(ModelDesc):
 
     def optimizer(self):
         opt = get_optimizer(self.optimizer_config)
+        '''
+        if self.optimizer_config['second'] != None:
+            temp = {'name': self.optimizer_config['second']}
+            opt2 = get_optimizer(temp)
 
+            choose = tf.get_variable('select_opt', initializer=False, dtype=tf.bool)
+            opt = tf.cond(choose, opt2, opt)
+        '''
+        
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['stop_grad']):
             self.add_stop_grad()
             opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.stop_grad)])
