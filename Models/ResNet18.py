@@ -48,9 +48,9 @@ class Model(ModelDesc):
     def build_graph(self, image, label):
         # get quantization function
         # quantize weights
-        qw = quantize_weight(int(self.quantizer_config['BITW']), self.quantizer_config['name'], self.quantizer_config['W_opts'])
+        qw = quantize_weight(int(self.quantizer_config['BITW']), self.quantizer_config['name'], self.quantizer_config['W_opts'], self.quantizer_config)
         # quantize activation
-        if self.quantizer_config['BITW'] in ['32', 32]:
+        if self.quantizer_config['BITA'] in ['32', 32]:
             qa = tf.identity
         else:
             qa = quantize_activation(int(self.quantizer_config['BITA']))
@@ -100,7 +100,36 @@ class Model(ModelDesc):
                     x = resblock(x, channel, 1)
             return x
 
-        def resblock_idt(x, channel, stride):
+        def resblock_idt(x, channel, stride, first):
+            def get_r(x):
+                if 'InferenceTower' in x.op.name:
+                    idx = x.op.name.index('/')
+                    n = x.op.name[idx+1::]
+                else:
+                    n = x.op.name
+                n0 = n.split('blk')[0]
+                n1 = n0 + 'blk1/shortcut/maxW'
+                n2 = n.split('/output')[0] + '/maxW'
+
+                maxs = tf.get_collection('maxs')
+                for tensor in maxs:
+                    tn = tensor.op.name
+                    if n1 == tn:
+                        m1 = tensor
+                    elif n2 == tn:
+                        m2 = tensor
+
+                r = m2 / m1
+
+                temp = self.quantizer_config['mulR']
+
+                if temp == '2R':
+                    r2 = (1 / r) * (2.0 ** tf.floor(tf.log(r) / tf.log(2.0)))
+                elif temp == 'R':
+                    r2 = 1 / r
+
+                return r2
+
             def get_stem_full(x):
                 return (LinearWrap(x)
                         .Conv2D('stem_conv_a', channel, 3, strides=(stride, stride))
@@ -108,29 +137,36 @@ class Model(ModelDesc):
                         .apply(activate)
                         .Conv2D('stem_conv_b', channel, 3, strides=(1, 1))())
 
-            channel_mismatch = channel != x.get_shape().as_list()[3]
-            if stride != 1 or channel_mismatch:
+            #channel_mismatch = channel != x.get_shape().as_list()[3]
+            #if stride != 1 or channel_mismatch:
+            if first:
                 #shortcut = tf.concat([x[::, 0::2, 0::2, ::], x[::, 1::2, 1::2, ::]], -1)
                 x = BatchNorm('bn', x)
                 x = activate(x)
-                if stride != 1:
-                    shortcut = Conv2D('shortcut', x, channel, 1, strides=(stride, stride))
-                else:
-                    shortcut = Conv2D('shortcut', x, channel, 1)
+                #if stride != 1:
+                #    shortcut = Conv2D('shortcut', x, channel, 1, strides=(stride, stride))
+                #else:
+                #    shortcut = Conv2D('shortcut', x, channel, 1)
+                shortcut = Conv2D('shortcut', x, channel, 1, strides=(stride, stride))
                 stem = get_stem_full(x)
             else:
                 shortcut = x
                 x = BatchNorm('bn', x)
                 x = activate(x)
                 stem = get_stem_full(x)
+
+            if self.quantizer_config['mulR'] in ['2R', 'R']:
+                r = get_r(stem)
+                stem = stem * r
+                
             return shortcut + stem
 
         def group_v2(x, name, channel, nr_block, stride):
             with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
-                x = resblock_idt(x, channel, stride)
+                x = resblock_idt(x, channel, stride, True)
             for i in range(2, nr_block + 1):
                 with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
-                    x = resblock_idt(x, channel, 1)
+                    x = resblock_idt(x, channel, 1, False)
             return x
 
         with remap_variables(new_get_variable), \

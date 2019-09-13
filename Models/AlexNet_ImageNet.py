@@ -48,9 +48,9 @@ class Model(ModelDesc):
     def build_graph(self, image, label):
         # get quantization function
         # quantize weights
-        qw = quantize_weight(int(self.quantizer_config['BITW']), self.quantizer_config['name'], self.quantizer_config['W_opts'])
+        qw = quantize_weight(int(self.quantizer_config['BITW']), self.quantizer_config['name'], self.quantizer_config['W_opts'], self.quantizer_config)
         # quantize activation
-        if self.quantizer_config['BITW'] in ['32', 32]:
+        if self.quantizer_config['BITA'] in ['32', 32]:
             qa = tf.identity
         else:
             qa = quantize_activation(int(self.quantizer_config['BITA']))

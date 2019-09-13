@@ -7,6 +7,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2
+import multiprocessing
 
 from tensorpack.dataflow import dataset
 from tensorpack.dataflow import imgaug
@@ -31,9 +32,9 @@ def fbresnet_augmentor(isTrain):
             # Removing brightness/contrast/saturation does not have a significant effect on accuracy.
             # Removing lighting leads to a tiny drop in accuracy.
             imgaug.RandomOrderAug(
-                [#imgaug.BrightnessScale((0.6, 1.4), clip=False),
-                 #imgaug.Contrast((0.6, 1.4), rgb=False, clip=False),
-                 #imgaug.Saturation(0.4, rgb=False),
+                [imgaug.BrightnessScale((0.6, 1.4), clip=False),
+                 imgaug.Contrast((0.6, 1.4), rgb=False, clip=False),
+                 imgaug.Saturation(0.4, rgb=False),
                  # rgb-bgr conversion for the constants copied from fb.resnet.torch
                  imgaug.Lighting(0.1,
                                  eigval=np.asarray(
@@ -57,7 +58,8 @@ def fbresnet_augmentor(isTrain):
 class ImageNet:
     def __init__(self):
         self.batch_size = 256
-        self.datadir = '/data3/ImageNet/ILSVRC2012'
+        #self.datadir = '/data3/ImageNet/ILSVRC2012'
+        self.datadir = '/home/jinbae/data/imagenet'
 
     def get_data(self, name, num_gpu):
         gpu_batch = self.batch_size // num_gpu
@@ -68,7 +70,7 @@ class ImageNet:
         augmentors = fbresnet_augmentor(isTrain)
         assert isinstance(augmentors, list)
 
-        parallel = 15
+        parallel = min(40, multiprocessing.cpu_count() // 2)  # assuming hyperthreading
 
         if isTrain:
             ds = dataset.ILSVRC12(self.datadir, name, shuffle=True, dir_structure='train')
@@ -77,7 +79,7 @@ class ImageNet:
             ds = BatchData(ds, gpu_batch, remainder=False)
             #ds = QueueInput(ds)
         else:
-            ds = dataset.ILSVRC12Files(self.datadir, name, shuffle=False)
+            ds = dataset.ILSVRC12Files(self.datadir, name, shuffle=False, dir_structure='train')
             aug = imgaug.AugmentorList(augmentors)
 
             def mapf(dp):

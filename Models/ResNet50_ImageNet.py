@@ -29,7 +29,7 @@ from .callbacks import InitSaver
 
 
 class Model(ModelDesc):
-    def __init__(self, config={}, size=32, nb_classes=10):
+    def __init__(self, config={}, size=32, nb_classes=1000):
         self.config = config
 
         self.size = size
@@ -69,43 +69,127 @@ class Model(ModelDesc):
         def activate(x):
             return qa(self.activation(x))
 
+        def resblock(x, channel, stride):
+            def get_stem_full(x):
+                return (LinearWrap(x)
+                        .Conv2D('stem_conv_a', channel, 3)
+                        .BatchNorm('stem_bn')
+                        .apply(activate)
+                        .Conv2D('stem_conv_b', channel, 3)())
+            
+            channel_mismatch = channel != x.get_shape().as_list()[3]
+            if stride != 1 or channel_mismatch:
+                if stride != 1:
+                    x = AvgPooling('avgpool', x, stride, stride)
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                shortcut = Conv2D('shortcut', x, channel, 1)
+                stem = get_stem_full(x)
+            else:
+                shortcut = x
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                stem = get_stem_full(x)
+            return shortcut + stem
+
+        def group(x, name, channel, nr_block, stride):
+            with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
+                x = resblock(x, channel, stride)
+            for i in range(2, nr_block + 1):
+                with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
+                    x = resblock(x, channel, 1)
+            return x
+
+        def resblock_idt(x, channel, stride, first):
+            def get_r(x):
+                if 'InferenceTower' in x.op.name:
+                    idx = x.op.name.index('/')
+                    n = x.op.name[idx+1::]
+                else:
+                    n = x.op.name
+                n0 = n.split('blk')[0]
+                n1 = n0 + 'blk1/shortcut/maxW'
+                n2 = n.split('/output')[0] + '/maxW'
+
+                maxs = tf.get_collection('maxs')
+                for tensor in maxs:
+                    tn = tensor.op.name
+                    if n1 == tn:
+                        m1 = tensor
+                    elif n2 == tn:
+                        m2 = tensor
+
+                r = m2 / m1
+
+                temp = self.quantizer_config['mulR']
+
+                if temp == '2R':
+                    r2 = (1 / r) * (2.0 ** tf.floor(tf.log(r) / tf.log(2.0)))
+                elif temp == 'R':
+                    r2 = 1 / r
+
+                return r2
+
+            def get_stem_full(x):
+                return (LinearWrap(x)
+                        .Conv2D('stem_conv_a', channel, 1, strides=(1, 1))
+                        .BatchNorm('stem_bn1')
+                        .apply(activate)
+                        .Conv2D('stem_conv_b', channel, 3, strides=(stride, stride))
+                        .BatchNorm('stem_bn2')
+                        .apply(activate)
+                        .Conv2D('stem_conv_c', channel * 4, 1, strides=(1, 1))())
+
+            #channel_mismatch = channel != x.get_shape().as_list()[3]
+            #if stride != 1 or channel_mismatch:
+            if first:
+                #shortcut = tf.concat([x[::, 0::2, 0::2, ::], x[::, 1::2, 1::2, ::]], -1)
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                #if stride != 1:
+                #    shortcut = Conv2D('shortcut', x, channel, 1, strides=(stride, stride))
+                #else:
+                #    shortcut = Conv2D('shortcut', x, channel, 1)
+                shortcut = Conv2D('shortcut', x, channel * 4, 1, strides=(stride, stride))
+                stem = get_stem_full(x)
+            else:
+                shortcut = x
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                stem = get_stem_full(x)
+
+            if self.quantizer_config['mulR'] in ['2R', 'R']:
+                r = get_r(stem)
+                stem = stem * r
+                
+            return shortcut + stem
+
+        def group_v2(x, name, channel, nr_block, stride):
+            with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
+                x = resblock_idt(x, channel, stride, True)
+            for i in range(2, nr_block + 1):
+                with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
+                    x = resblock_idt(x, channel, 1, False)
+            return x
+
         with remap_variables(new_get_variable), \
                 argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
                 argscope(Conv2D, use_bias=False, nl=tf.identity,
                          kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['scale']),
                                                                             mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
-                      .Conv2D('conv1', 96, 3)
-                      .BatchNorm('bn1')
+                      .Conv2D('conv1', 64, 7, strides=2)   # size=112
+                      .MaxPooling('pool1', pool_size=3, strides=2, padding="SAME")      # size=56
+                      #.BatchNorm('bn1')
+                      #.apply(activate)
+                      .apply(group_v2, 'res1', 64, 3, 1)  # size=56
+                      .apply(group_v2, 'res2', 128, 4, 2)  # size=28
+                      .apply(group_v2, 'res3', 256, 6, 2)  # size=14
+                      .apply(group_v2, 'res4', 512, 3, 2)  # size=7
+                      .BatchNorm('last_bn')
                       .apply(activate)
-                      .Conv2D('conv2', 256, 3, padding='SAME', split=2)
-                      .BatchNorm('bn2')
-                      .apply(activate)
-                      .MaxPooling('pool2', 2, 2, padding='VALID')  # size=16
-
-                      .Conv2D('conv3', 384, 3)
-                      .BatchNorm('bn3')
-                      .apply(activate)
-                      .MaxPooling('pool2', 2, 2, padding='VALID')  # size=8
-
-                      .Conv2D('conv4', 384, 3, split=2)
-                      .BatchNorm('bn4')
-                      .apply(activate)
-
-                      .Conv2D('conv5', 256, 3, split=2)
-                      .BatchNorm('bn5')
-                      .apply(activate)
-                      .MaxPooling('pool5', 2, 2, padding='VALID')  # size=4
-
-                      .FullyConnected('fc1', 4096, use_bias=False)
-                      .BatchNorm('bnfc1')
-                      .apply(activate)
-
-                      .FullyConnected('fc2', 4096, use_bias=False)
-                      .BatchNorm('bnfc2')
-                      .apply(activate)
-
-                      .FullyConnected('fct', self.nb_classes, use_bias=True)())
+                      .GlobalAvgPooling('gap')
+                      .FullyConnected('fct', self.nb_classes)())
         prob = tf.nn.softmax(logits, name='output')
 
         cost = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=label)
@@ -177,7 +261,7 @@ class Model(ModelDesc):
                 return new_grad
 
         self.stop_grad = func
-
+        
     def add_clustering_update(self, n_ls):
         def func(grad, val):
             val_name = val.op.name
@@ -245,15 +329,7 @@ class Model(ModelDesc):
 
     def optimizer(self):
         opt = get_optimizer(self.optimizer_config)
-        '''
-        if self.optimizer_config['second'] != None:
-            temp = {'name': self.optimizer_config['second']}
-            opt2 = get_optimizer(temp)
 
-            choose = tf.get_variable('select_opt', initializer=False, dtype=tf.bool)
-            opt = tf.cond(choose, opt2, opt)
-        '''
-        
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['stop_grad']):
             self.add_stop_grad()
             opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.stop_grad)])
@@ -271,16 +347,27 @@ class Model(ModelDesc):
         return opt
 
     def get_callbacks(self, ds_tst):
+        if self.config['num_gpu'] == 1:
+            runner = InferenceRunner(ds_tst,
+                                     [ScalarStats('cross_entropy_loss'),
+                                      ClassificationError('err_top1', summary_name='validation_error_top1'),
+                                      ClassificationError('err_top5', summary_name='validation_error_top5')])
+        elif self.config['num_gpu'] > 1:
+            runner = DataParallelInferenceRunner(ds_tst,
+                                                 [ScalarStats('cross_entropy_loss'),
+                                                  ClassificationError('err_top1', summary_name='validation_error_top1'),
+                                                  ClassificationError('err_top5', summary_name='validation_error_top5')],
+                                                 list(range(self.config['num_gpu'])))
         callbacks=[
             ModelSaver(max_to_keep=1),
-            InferenceRunner(ds_tst,
-                            [ScalarStats('cross_entropy_loss'),
-                             ClassificationError('err_top1', summary_name='validation_error_top1'),
-                             ClassificationError('err_top5', summary_name='validation_error_top5')]),
+            runner,
             MinSaver('validation_error_top1'),
             CkptModifier('min-validation_error_top1'),
             StatsChecker()
         ]
+
+
+
 
         # scheduling learning rate
         if self.optimizer_config['lr_schedule'] not in [None, 'None']:
@@ -290,10 +377,11 @@ class Model(ModelDesc):
                 callbacks += [ScheduledHyperParamSetter('learning_rate', self.optimizer_config['lr_schedule'])]
         else:
             callbacks += [ScheduledHyperParamSetter('learning_rate',
-                                      [(1, 0.1), (82, 0.01), (123, 0.001), (300, 0.0002)])]
+                                      [(0, 0.1), (30, 0.01), (60, 0.001), (90, 0.0001), (100, 0.00001)])]
 
         if eval(self.config['save_init']):
             callbacks = [InitSaver()]
 
         max_epoch = int(self.optimizer_config['max_epoch'])
+        max_epoch = 105
         return callbacks, max_epoch

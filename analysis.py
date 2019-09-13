@@ -30,7 +30,10 @@ if __name__ == '__main__':
         meta_file = logdir + '/' + meta_file
         outfile = logdir + '/' + 'best.npz'
         r = os.system('python %s --meta %s %s %s' % (dump_py, meta_file, ckpt_file, outfile))
-        
+
+        ######
+        max_file = ''
+        max_file += outfile + '\n\n'
         
         # draw distribution
         #outfile = logdir + '/' + 'best.npz'
@@ -47,8 +50,8 @@ if __name__ == '__main__':
         total_in_prob = 0
         total_out_prob = 0
         result_dic = {}
-
-        keys = list(dic.keys())
+        
+        keys = sorted(list(dic.keys()))
         for key in keys:
             if '/W:0' in key:
                 x = dic[key].flatten()
@@ -60,6 +63,9 @@ if __name__ == '__main__':
                     if 'conv1' in key or 'fct' in key:
                         return False
                     return True
+
+                #####
+                max_file += key + '\n'
 
                 if not check_cond(key):
                     maxW = np.amax(np.absolute(x))
@@ -75,6 +81,12 @@ if __name__ == '__main__':
                     else:
                         maxW = np.amax(np.absolute(x))
                 thresh = maxW * ratio
+
+                ######
+                max_file += 'max: '+ str(maxW) + '\n'
+                try:
+                    max_file += 'temp max: ' + str(maxW_temp) + '\n'
+                except NameError: print('no temp_max')
                 
                 if check_cond(key):
                     if eval(config['quantizer']['W_opts']['is_Lv']):
@@ -99,6 +111,10 @@ if __name__ == '__main__':
                             cnt1 += 1
                     prob1 = cnt1 / x.shape[0] * 100
                     prob2 = cnt2 / x.shape[0] * 100
+
+                    ######
+                    max_file += 'SLW probability: ' + str(prob2) + '\n\n'
+                    
                     txt = 'lv3: {:.6f}%/ lv{}: {:.6f}%'.format(prob1, int(n*2 + 1), prob2)
                     # for total
                     total_weights += x.shape[0]
@@ -161,14 +177,44 @@ if __name__ == '__main__':
             file.write('total in prob: {}\n'.format(total_in_prob / total_weights * 100))
             file.write('total out prob: {}'.format(total_out_prob / total_weights * 100))
 
-
+        ####
         best = {}
         with open(logdir + '/best.json') as f:
             best = json.load(f)
 
-        best['in_prob'] = total_in_prob / total_weights * 100
-        best['out_prob'] = total_out_prob / total_weights * 100
+        ####
+        in_prob = total_in_prob / total_weights * 100
+        out_prob = total_out_prob / total_weights * 100
+        
+        best['in_prob'] = in_prob
+        best['out_prob'] = out_prob
 
+        ####
+        sma1 = eval(best['sma_error_top1'])
+        sma5 = eval(best['sma_error_top5'])
+
+        best['sma_accuracy_top1'] = 100.0 - sma1
+        best['sma_accuracy_top5'] = 100.0 - sma5
+
+        ####
+        val1 = best['validation_error_top1']
+        val5 = best['validation_error_top5']
+
+        best['validation_accuracy_top1'] = 100.0 - val1
+        best['validation_accuracy_top5'] = 100.0 - val5
+
+        ####
+        in_b, ex_b = eval(config['quantizer']['W_opts']['threshold_bit'])
+        avg_bit = (in_b * in_prob + (in_b + ex_b) * out_prob) / (in_prob + out_prob)
+
+        best['average_bit_length'] = avg_bit
+
+        ####
         with open(logdir + '/best.json', 'w') as outfile:
             json.dump(best, outfile)
 
+        ####
+        with open(logdir + '/maxs.txt', 'w') as file:
+            file.write(max_file)
+
+        exit()

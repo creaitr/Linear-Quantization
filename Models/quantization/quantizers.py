@@ -56,13 +56,24 @@ class GlobalStep(Callback):
 '''
 
 
-def quantize_weight(bitW, name, opts):
+def quantize_weight(bitW, name, opts, quantizer_config):
     # 1. Linear Quantization
     if name == 'linear':
         # 1-Level Quantization
         if eval(opts['centralized']) == False or eval(opts['centralized']) == True:
             def qw(x):
                 if bitW == 32:
+
+                    if quantizer_config['mulR'] in ['2R', 'R']:
+                        if eval(opts['fix_max']):
+                            param_name = x.op.name.split('/W')[0] + '/maxW'
+                            max_x = tf.stop_gradient(tf.get_variable('maxW', initializer=1.0, dtype=tf.float32), name=param_name)
+                            tf.add_to_collection('maxs', max_x)
+                        else:
+                            param_name = x.op.name.split('/W')[0] + '/maxW'
+                            max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)), name=param_name)
+                            tf.add_to_collection('maxs', max_x)
+                    
                     return x
 
                 if eval(opts['fix_max']):
@@ -72,6 +83,9 @@ def quantize_weight(bitW, name, opts):
                     x = tf.clip_by_value(x, -max_x, max_x)
                 else:
                     max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+
+                tf.add_to_collection('maxs', max_x)
+                
                 x = x / max_x
 
                 if eval(opts['is_Lv']): # midtread

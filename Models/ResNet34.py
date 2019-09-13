@@ -69,43 +69,123 @@ class Model(ModelDesc):
         def activate(x):
             return qa(self.activation(x))
 
+        def resblock(x, channel, stride):
+            def get_stem_full(x):
+                return (LinearWrap(x)
+                        .Conv2D('stem_conv_a', channel, 3)
+                        .BatchNorm('stem_bn')
+                        .apply(activate)
+                        .Conv2D('stem_conv_b', channel, 3)())
+            
+            channel_mismatch = channel != x.get_shape().as_list()[3]
+            if stride != 1 or channel_mismatch:
+                if stride != 1:
+                    x = AvgPooling('avgpool', x, stride, stride)
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                shortcut = Conv2D('shortcut', x, channel, 1)
+                stem = get_stem_full(x)
+            else:
+                shortcut = x
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                stem = get_stem_full(x)
+            return shortcut + stem
+
+        def group(x, name, channel, nr_block, stride):
+            with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
+                x = resblock(x, channel, stride)
+            for i in range(2, nr_block + 1):
+                with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
+                    x = resblock(x, channel, 1)
+            return x
+
+        def resblock_idt(x, channel, stride, first):
+            def get_r(x):
+                if 'InferenceTower' in x.op.name:
+                    idx = x.op.name.index('/')
+                    n = x.op.name[idx+1::]
+                else:
+                    n = x.op.name
+                n0 = n.split('blk')[0]
+                n1 = n0 + 'blk1/shortcut/maxW'
+                n2 = n.split('/output')[0] + '/maxW'
+
+                maxs = tf.get_collection('maxs')
+                for tensor in maxs:
+                    tn = tensor.op.name
+                    if n1 == tn:
+                        m1 = tensor
+                    elif n2 == tn:
+                        m2 = tensor
+
+                r = m2 / m1
+
+                temp = self.quantizer_config['mulR']
+
+                if temp == '2R':
+                    r2 = (1 / r) * (2.0 ** tf.floor(tf.log(r) / tf.log(2.0)))
+                elif temp == 'R':
+                    r2 = 1 / r
+
+                return r2
+
+            def get_stem_full(x):
+                return (LinearWrap(x)
+                        .Conv2D('stem_conv_a', channel, 3, strides=(stride, stride))
+                        .BatchNorm('stem_bn')
+                        .apply(activate)
+                        .Conv2D('stem_conv_b', channel, 3, strides=(1, 1))())
+
+            #channel_mismatch = channel != x.get_shape().as_list()[3]
+            #if stride != 1 or channel_mismatch:
+            if first:
+                #shortcut = tf.concat([x[::, 0::2, 0::2, ::], x[::, 1::2, 1::2, ::]], -1)
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                #if stride != 1:
+                #    shortcut = Conv2D('shortcut', x, channel, 1, strides=(stride, stride))
+                #else:
+                #    shortcut = Conv2D('shortcut', x, channel, 1)
+                shortcut = Conv2D('shortcut', x, channel, 1, strides=(stride, stride))
+                stem = get_stem_full(x)
+            else:
+                shortcut = x
+                x = BatchNorm('bn', x)
+                x = activate(x)
+                stem = get_stem_full(x)
+
+            if self.quantizer_config['mulR'] in ['2R', 'R']:
+                r = get_r(stem)
+                stem = stem * r
+                
+            return shortcut + stem
+
+        def group_v2(x, name, channel, nr_block, stride):
+            with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
+                x = resblock_idt(x, channel, stride, True)
+            for i in range(2, nr_block + 1):
+                with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
+                    x = resblock_idt(x, channel, 1, False)
+            return x
+
         with remap_variables(new_get_variable), \
                 argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
                 argscope(Conv2D, use_bias=False, nl=tf.identity,
                          kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['scale']),
                                                                             mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
-                      .Conv2D('conv1', 96, 3)
-                      .BatchNorm('bn1')
+                      .Conv2D('conv1', 64, 3)   # size=32
+                      #.BatchNorm('bn1')
+                      #.apply(activate)
+                      .apply(group_v2, 'res1', 64, 3, 1)  # size=32
+                      .apply(group_v2, 'res2', 128, 4, 2)  # size=16
+                      .apply(group_v2, 'res3', 256, 6, 2)  # size=8
+                      .apply(group_v2, 'res4', 512, 3, 2)  # size=4
+                      .BatchNorm('last_bn')
                       .apply(activate)
-                      .Conv2D('conv2', 256, 3, padding='SAME', split=2)
-                      .BatchNorm('bn2')
-                      .apply(activate)
-                      .MaxPooling('pool2', 2, 2, padding='VALID')  # size=16
-
-                      .Conv2D('conv3', 384, 3)
-                      .BatchNorm('bn3')
-                      .apply(activate)
-                      .MaxPooling('pool2', 2, 2, padding='VALID')  # size=8
-
-                      .Conv2D('conv4', 384, 3, split=2)
-                      .BatchNorm('bn4')
-                      .apply(activate)
-
-                      .Conv2D('conv5', 256, 3, split=2)
-                      .BatchNorm('bn5')
-                      .apply(activate)
-                      .MaxPooling('pool5', 2, 2, padding='VALID')  # size=4
-
-                      .FullyConnected('fc1', 4096, use_bias=False)
-                      .BatchNorm('bnfc1')
-                      .apply(activate)
-
-                      .FullyConnected('fc2', 4096, use_bias=False)
-                      .BatchNorm('bnfc2')
-                      .apply(activate)
-
-                      .FullyConnected('fct', self.nb_classes, use_bias=True)())
+                      .GlobalAvgPooling('gap')
+                      .FullyConnected('fct', self.nb_classes)())
         prob = tf.nn.softmax(logits, name='output')
 
         cost = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=label)
@@ -115,6 +195,7 @@ class Model(ModelDesc):
         if self.regularizer_config['name'] not in [None, 'None']:
             reg_func = getattr(regularizers, self.regularizer_config['name'])().get_func(self.regularizer_config)
             reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), regularize_cost('.*/W', reg_func), name='reg_cost')
+            #reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), regularize_cost_from_collection(), name='reg_cost')
             total_cost = tf.add_n([cost, reg_cost], name='total_cost')
         else:
             total_cost = cost
@@ -155,7 +236,7 @@ class Model(ModelDesc):
                     mask_name = name_scope + '/maskW'
                     mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
 
-                new_x = tf.where(tf.equal(1.0, mask), tf.clip_by_value(x, -thresh, thresh), x)
+                new_x = tf.where(tf.equal(1.0, mask), tf.clip_by_value(x, -thresh, thresh), tf.clip_by_value(x, -max_x, max_x))
                 return tf.assign(x, new_x, use_locking=False).op
 
         self.centralizing = func
@@ -245,15 +326,7 @@ class Model(ModelDesc):
 
     def optimizer(self):
         opt = get_optimizer(self.optimizer_config)
-        '''
-        if self.optimizer_config['second'] != None:
-            temp = {'name': self.optimizer_config['second']}
-            opt2 = get_optimizer(temp)
 
-            choose = tf.get_variable('select_opt', initializer=False, dtype=tf.bool)
-            opt = tf.cond(choose, opt2, opt)
-        '''
-        
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['stop_grad']):
             self.add_stop_grad()
             opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.stop_grad)])

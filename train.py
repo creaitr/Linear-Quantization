@@ -109,6 +109,6 @@ if __name__ == '__main__':
 
     # train the model
     if num_gpu > 1:
-        launch_train_with_config(train_config, SyncMultiGPUTrainerReplicated(num_gpu, mode='nccl'))
+        launch_train_with_config(train_config, SyncMultiGPUTrainerReplicated(num_gpu))
     else:
         launch_train_with_config(train_config, SimpleTrainer())

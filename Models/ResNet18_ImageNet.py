@@ -48,9 +48,9 @@ class Model(ModelDesc):
     def build_graph(self, image, label):
         # get quantization function
         # quantize weights
-        qw = quantize_weight(int(self.quantizer_config['BITW']), self.quantizer_config['name'], self.quantizer_config['W_opts'])
+        qw = quantize_weight(int(self.quantizer_config['BITW']), self.quantizer_config['name'], self.quantizer_config['W_opts'], self.quantizer_config)
         # quantize activation
-        if self.quantizer_config['BITW'] in ['32', 32]:
+        if self.quantizer_config['BITA'] in ['32', 32]:
             qa = tf.identity
         else:
             qa = quantize_activation(int(self.quantizer_config['BITA']))
@@ -100,7 +100,36 @@ class Model(ModelDesc):
                     x = resblock(x, channel, 1)
             return x
 
-        def resblock_idt(x, channel, stride):
+        def resblock_idt(x, channel, stride, first):
+            def get_r(x):
+                if 'InferenceTower' in x.op.name:
+                    idx = x.op.name.index('/')
+                    n = x.op.name[idx+1::]
+                else:
+                    n = x.op.name
+                n0 = n.split('blk')[0]
+                n1 = n0 + 'blk1/shortcut/maxW'
+                n2 = n.split('/output')[0] + '/maxW'
+
+                maxs = tf.get_collection('maxs')
+                for tensor in maxs:
+                    tn = tensor.op.name
+                    if n1 == tn:
+                        m1 = tensor
+                    elif n2 == tn:
+                        m2 = tensor
+
+                r = m2 / m1
+
+                temp = self.quantizer_config['mulR']
+
+                if temp == '2R':
+                    r2 = (1 / r) * (2.0 ** tf.floor(tf.log(r) / tf.log(2.0)))
+                elif temp == 'R':
+                    r2 = 1 / r
+
+                return r2
+            
             def get_stem_full(x):
                 return (LinearWrap(x)
                         .Conv2D('stem_conv_a', channel, 3, strides=(stride, stride))
@@ -108,29 +137,36 @@ class Model(ModelDesc):
                         .apply(activate)
                         .Conv2D('stem_conv_b', channel, 3, strides=(1, 1))())
 
-            channel_mismatch = channel != x.get_shape().as_list()[3]
-            if stride != 1 or channel_mismatch:
+            #channel_mismatch = channel != x.get_shape().as_list()[3]
+            #if stride != 1 or channel_mismatch:
+            if first:
                 #shortcut = tf.concat([x[::, 0::2, 0::2, ::], x[::, 1::2, 1::2, ::]], -1)
                 x = BatchNorm('bn', x)
                 x = activate(x)
-                if stride != 1:
-                    shortcut = Conv2D('shortcut', x, channel, 1, strides=(stride, stride))
-                else:
-                    shortcut = Conv2D('shortcut', x, channel, 1)
+                #if stride != 1:
+                #    shortcut = Conv2D('shortcut', x, channel, 1, strides=(stride, stride))
+                #else:
+                #    shortcut = Conv2D('shortcut', x, channel, 1)
+                shortcut = Conv2D('shortcut', x, channel, 1, strides=(stride, stride))
                 stem = get_stem_full(x)
             else:
                 shortcut = x
                 x = BatchNorm('bn', x)
                 x = activate(x)
                 stem = get_stem_full(x)
+
+            if self.quantizer_config['mulR'] in ['2R', 'R']:
+                r = get_r(stem)
+                stem = stem * r
+                
             return shortcut + stem
 
         def group_v2(x, name, channel, nr_block, stride):
             with tf.variable_scope(name + 'blk1', reuse=tf.AUTO_REUSE):
-                x = resblock_idt(x, channel, stride)
+                x = resblock_idt(x, channel, stride, True)
             for i in range(2, nr_block + 1):
                 with tf.variable_scope(name + 'blk{}'.format(i), reuse=tf.AUTO_REUSE):
-                    x = resblock_idt(x, channel, 1)
+                    x = resblock_idt(x, channel, 1, False)
             return x
 
         with remap_variables(new_get_variable), \
@@ -140,7 +176,7 @@ class Model(ModelDesc):
                                                                             mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
                       .Conv2D('conv1', 64, 7, strides=2)   # size=112
-                      .MaxPooling('pool1', pool_size=2, strides=2, padding="VALID")      # size=56
+                      .MaxPooling('pool1', pool_size=3, strides=2, padding="SAME")      # size=56
                       #.BatchNorm('bn1')
                       #.apply(activate)
                       .apply(group_v2, 'res1', 64, 2, 1)  # size=56
@@ -186,25 +222,43 @@ class Model(ModelDesc):
                 inBIT, exBIT = eval(self.quantizer_config['W_opts']['threshold_bit'])
                 ratio = (1 / (1 + ((2 ** exBIT - 1) / (2 ** inBIT - 1))))
 
-                if eval(self.quantizer_config['W_opts']['fix_max']):
-                    with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
+                with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
+                    if eval(self.quantizer_config['W_opts']['fix_max']):
                         #max_x_name = 'post_op_internals/' + name_scope + '/maxW'
                         #max_x_name = name_scope + '/maxW'
                         max_x = tf.stop_gradient(tf.get_variable('maxW', shape=(), initializer=tf.ones_initializer, dtype=tf.float32))
                         max_x *= float(self.quantizer_config['W_opts']['max_scale'])
-                else:
-                    max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+                    else:
+                        max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
 
-                thresh = max_x * ratio * 0.999
+                    thresh = max_x * ratio * 0.999
 
-                mask_name = name_scope + '/maskW'
-                mask = tf.get_variable(mask_name, shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
+                    mask_name = name_scope + '/maskW'
+                    mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
 
                 new_x = tf.where(tf.equal(1.0, mask), tf.clip_by_value(x, -thresh, thresh), x)
                 return tf.assign(x, new_x, use_locking=False).op
 
         self.centralizing = func
 
+    def add_stop_grad(self):
+        def func(grad, val):
+            val_name = val.op.name
+            if '/W' in val_name and 'conv1' not in val_name and 'fct' not in val_name:
+                name_scope, device_scope = val.op.name.split('/W')
+                
+                with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
+                    mask_name = name_scope + '/maskW'
+                    mask = tf.get_variable('maskW', shape=val.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
+
+                    #zero_grad = tf.zeros(shape=grad.shape)
+
+                    new_grad = tf.where(tf.equal(1.0, mask), grad, grad * 0.1)
+                    
+                return new_grad
+
+        self.stop_grad = func
+        
     def add_clustering_update(self, n_ls):
         def func(grad, val):
             val_name = val.op.name
@@ -273,7 +327,13 @@ class Model(ModelDesc):
     def optimizer(self):
         opt = get_optimizer(self.optimizer_config)
 
+        if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['stop_grad']):
+            self.add_stop_grad()
+            opt = optimizer.apply_grad_processors(opt, [gradproc.MapGradient(self.stop_grad)])
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['centralized']):
+            self.add_centralizing_update()
+            opt = optimizer.PostProcessOptimizer(opt, self.centralizing)
+        if self.quantizer_config['name'] == 'cent':
             self.add_centralizing_update()
             opt = optimizer.PostProcessOptimizer(opt, self.centralizing)
         if self.quantizer_config['name'] == 'cluster' and eval(self.load_config['clustering']):
