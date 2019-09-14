@@ -14,6 +14,6 @@ cmd = 'python train.py config config{0}.json gpu={1}'.format(gpu[0], gpu)
 
 cmd = cmd + ' logdir={}'.format(best['logdir']) + '_{0}'
 
-for i in range(2):
+for i in range(1):
     r = os.system(cmd.format(i))
 
