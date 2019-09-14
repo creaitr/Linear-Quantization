@@ -1,11 +1,11 @@
 {
-  "model": "ResNet18",
-  "dataset": "Cifar100",
-  "logdir": "ResNet18_FP_ReLU1",
+  "model": "ResNet18_ImageNet",
+  "dataset": "ImageNet",
+  "logdir": "ResNet18_ImageNet_FP_mulR",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "init_resnet18.npz",
+    "name": "init_resnet18_imagenet.npz",
     "find_max": "False",
     "find_99th": "False",
     "add_reg_prefix": "False",
@@ -19,7 +19,7 @@
     "scale": 2.0,
     "mode": "fan_in"
   },
-  "activation": "relu1",
+  "activation": "relu",
   "regularizer": {
     "name": "Ridge",
     "lmbd": 0.0002,
@@ -33,7 +33,7 @@
     "name": "linear",
     "BITW": 32,
     "W_opts": {
-      "fix_max": "True",
+      "fix_max": "False",
       "max_scale": 1.0,
       "is_Lv": "True",
       "centralized": "False",
@@ -43,12 +43,12 @@
     },
     "BITA": 32,
     "BITG": 32,
-    "mulR": "1"
+    "mulR": "R"
   },
   "optimizer": {
     "name": "NesterovAG",
     "lr": 0.1,
-    "lr_schedule": [[0, 0.1], [101, 0.01], [201, 0.001], [301, 0.0001]],
+    "lr_schedule": [[0, 0.1], [100, 0.01], [200, 0.001], [300, 0.0001]],
     "max_epoch": 300
   }
 }

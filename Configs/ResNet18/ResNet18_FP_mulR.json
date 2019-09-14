@@ -1,7 +1,7 @@
 {
   "model": "ResNet18",
   "dataset": "Cifar100",
-  "logdir": "ResNet18_FP",
+  "logdir": "ResNet18_FP_mulR",
   "gpu": "0",
   "save_init": "False",
   "load": {
@@ -43,7 +43,7 @@
     },
     "BITA": 32,
     "BITG": 32,
-    "mulR": "1"
+    "mulR": "R"
   },
   "optimizer": {
     "name": "NesterovAG",

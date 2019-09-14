@@ -1,11 +1,11 @@
 {
-  "model": "ResNet18",
-  "dataset": "Cifar100",
-  "logdir": "ResNet18_FP",
+  "model": "ResNet18_ImageNet",
+  "dataset": "ImageNet",
+  "logdir": "ResNet18_ImageNet_FP",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "init_resnet18.npz",
+    "name": "init_resnet18_imagenet.npz",
     "find_max": "False",
     "find_99th": "False",
     "add_reg_prefix": "False",
