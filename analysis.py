@@ -34,6 +34,9 @@ if __name__ == '__main__':
         ######
         max_file = ''
         max_file += outfile + '\n\n'
+        maxs = []
+        max_temps = []
+        slws = []
         
         # draw distribution
         #outfile = logdir + '/' + 'best.npz'
@@ -65,7 +68,8 @@ if __name__ == '__main__':
                     return True
 
                 #####
-                max_file += key + '\n'
+                if check_cond(key):
+                    max_file += key + '\n'
 
                 if not check_cond(key):
                     maxW = np.amax(np.absolute(x))
@@ -83,10 +87,14 @@ if __name__ == '__main__':
                 thresh = maxW * ratio
 
                 ######
-                max_file += 'max: '+ str(maxW) + '\n'
-                try:
-                    max_file += 'temp max: ' + str(maxW_temp) + '\n'
-                except NameError: print('no temp_max')
+                if check_cond(key):
+                    max_file += 'max: '+ str(maxW) + '\n'
+                    maxs.append(maxW)
+                    
+                    try:
+                        max_file += 'temp max: ' + str(maxW_temp) + '\n'
+                        max_temps.append(maxW_temp)
+                    except NameError: print('no temp_max')
                 
                 if check_cond(key):
                     if eval(config['quantizer']['W_opts']['is_Lv']):
@@ -114,6 +122,7 @@ if __name__ == '__main__':
 
                     ######
                     max_file += 'SLW probability: ' + str(prob2) + '\n\n'
+                    slws.append(prob2)
                     
                     txt = 'lv3: {:.6f}%/ lv{}: {:.6f}%'.format(prob1, int(n*2 + 1), prob2)
                     # for total
@@ -216,5 +225,15 @@ if __name__ == '__main__':
         ####
         with open(logdir + '/maxs.txt', 'w') as file:
             file.write(max_file)
+            file.write('\n\n\n')
+            file.write('maxs:\n')
+            file.write(str(maxs))
+            file.write('\n\n')
+            file.write('max_temps:\n')
+            file.write(str(max_temps))
+            file.write('\n\n')
+            file.write('slws:\n')
+            file.write(str(slws))
+            file.write('\n\n')
 
         exit()

@@ -42,7 +42,8 @@
       "threshold_bit": "[2,2]"
     },
     "BITA": 32,
-    "BITG": 32
+    "BITG": 32,
+    "mulR": "1"
   },
   "optimizer": {
     "name": "NesterovAG",
