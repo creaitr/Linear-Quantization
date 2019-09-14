@@ -1,17 +1,17 @@
 {
   "model": "AlexNet",
   "dataset": "Cifar100",
-  "logdir": "AlexNet_FP_WR23",
+  "logdir": "AlexNet_SQ_W11LA4_WR23-0.05",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "pretrn_alexnet.npz",
-    "find_max": "True",
+    "name": "quantized_11l_wr23-0.05_alexnet.npz",
+    "find_max": "False",
     "find_99th": "False",
-    "add_reg_prefix": "True",
+    "add_reg_prefix": "False",
     "del_reg_prefix": "False",
     "pruning": "False",
-    "make_mask": "False",
+    "make_mask": "True",
     "mask_load": null,
     "clustering": "False"
   },
@@ -19,36 +19,36 @@
     "scale": 2.0,
     "mode": "fan_in"
   },
-  "activation": "relu",
+  "activation": "relu1",
   "regularizer": {
-    "name": "Weighted_Ridge1",
+    "name": "Ridge",
     "lmbd": 0.02,
     "sub_reg": {
-      "relative_lmbd": 4.0,
+      "relative_lmbd": 2.0,
       "fix_max": "True",
       "sub_ratio": [2,3]
     }
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 32,
+    "BITW": 11,
     "W_opts": {
       "fix_max": "True",
       "max_scale": 1.0,
       "is_Lv": "True",
-      "centralized": "False",
+      "centralized": "True",
       "stop_grad": "False",
       "pruning": "False",
       "threshold_bit": "[2,3]"
     },
-    "BITA": 32,
+    "BITA": 4,
     "BITG": 32,
     "mulR": "1"
   },
   "optimizer": {
-    "name": "NesterovAG",
+    "name": "SGD",
     "lr": 0.01,
-    "lr_schedule": [[0, 0.01], [101, 0.001], [201, 0.0001], [301, 0.00001]],
+    "lr_schedule": [[0, 0.01], [100, 0.001], [200, 0.0001], [300, 0.00001]],
     "max_epoch": 300
   }
 }

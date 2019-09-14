@@ -1,17 +1,17 @@
 {
   "model": "AlexNet",
   "dataset": "Cifar100",
-  "logdir": "AlexNet_SQ_W11LA4",
+  "logdir": "AlexNet_Q_WTA4",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "quantized_11l_wr23-4_alexnet.npz",
+    "name": "pretrn_relu1_alexnet.npz",
     "find_max": "False",
     "find_99th": "False",
     "add_reg_prefix": "False",
     "del_reg_prefix": "False",
     "pruning": "False",
-    "make_mask": "True",
+    "make_mask": "False",
     "mask_load": null,
     "clustering": "False"
   },
@@ -31,12 +31,12 @@
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 11,
+    "BITW": 3,
     "W_opts": {
-      "fix_max": "True",
+      "fix_max": "False",
       "max_scale": 1.0,
       "is_Lv": "True",
-      "centralized": "True",
+      "centralized": "False",
       "stop_grad": "False",
       "pruning": "False",
       "threshold_bit": "[2,3]"
@@ -46,9 +46,9 @@
     "mulR": "1"
   },
   "optimizer": {
-    "name": "SGD",
+    "name": "NesterovAG",
     "lr": 0.01,
-    "lr_schedule": [[0, 0.01], [101, 0.001], [201, 0.0001], [301, 0.00001]],
+    "lr_schedule": [[0, 0.01], [100, 0.001], [200, 0.0001], [300, 0.00001]],
     "max_epoch": 300
   }
 }
