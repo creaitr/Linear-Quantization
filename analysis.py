@@ -11,7 +11,7 @@ if __name__ == '__main__':
         path = sys.argv[1]
     else:
         path = './train_log'
-    
+    print(os.listdir(path))
     #path = './temp'
     for logdir in os.listdir(path):
         logdir = path + '/' + logdir
@@ -236,4 +236,3 @@ if __name__ == '__main__':
             file.write(str(slws))
             file.write('\n\n')
 
-        exit()
