@@ -5,7 +5,7 @@
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "pretrn_relu1_resnet18.npz",
+    "name": "pretrn_relu1_mul2r_resnet18.npz",
     "find_max": "True",
     "find_99th": "False",
     "add_reg_prefix": "False",
@@ -26,7 +26,7 @@
     "sub_reg": {
       "relative_lmbd": 2.0,
       "fix_max": "True",
-      "sub_ratio": [2,3]
+      "sub_ratio": [2,2]
     }
   },
   "quantizer": {
@@ -39,16 +39,16 @@
       "centralized": "False",
       "stop_grad": "False",
       "pruning": "False",
-      "threshold_bit": "[2,3]"
+      "threshold_bit": "[2,2]"
     },
     "BITA": 4,
     "BITG": 32,
-    "mulR": "1"
+    "mulR": "2R"
   },
   "optimizer": {
     "name": "NesterovAG",
     "lr": 0.1,
-    "lr_schedule": [[0, 0.1], [101, 0.01], [201, 0.001], [301, 0.0001]],
+    "lr_schedule": [[0, 0.1], [100, 0.01], [200, 0.001], [300, 0.0001]],
     "max_epoch": 300
   }
 }

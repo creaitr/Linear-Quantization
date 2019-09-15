@@ -1,7 +1,7 @@
 {
   "model": "ResNet18",
   "dataset": "Cifar100",
-  "logdir": "ResNet18_Q_W11LA4_WR23-2",
+  "logdir": "ResNet18_Q_W7LA4_WR22-0.0625",
   "gpu": "0",
   "save_init": "False",
   "load": {
@@ -24,14 +24,14 @@
     "name": "Weighted_Ridge1",
     "lmbd": 0.0002,
     "sub_reg": {
-      "relative_lmbd": 2.0,
+      "relative_lmbd": 0.0625,
       "fix_max": "True",
-      "sub_ratio": [2,3]
+      "sub_ratio": [2,2]
     }
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 11,
+    "BITW": 7,
     "W_opts": {
       "fix_max": "True",
       "max_scale": 1.0,
@@ -39,7 +39,7 @@
       "centralized": "False",
       "stop_grad": "False",
       "pruning": "False",
-      "threshold_bit": "[2,3]"
+      "threshold_bit": "[2,2]"
     },
     "BITA": 4,
     "BITG": 32,

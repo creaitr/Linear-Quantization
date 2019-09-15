@@ -1,17 +1,17 @@
 {
   "model": "AlexNet",
   "dataset": "Cifar100",
-  "logdir": "AlexNet_Q_W11LA4_WR23-0.025",
+  "logdir": "AlexNet_SQ_W11LA4_WR23-1.2",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "pretrn_relu1_alexnet.npz",
-    "find_max": "True",
+    "name": "quantized_11l_wr23-1.2_alexnet.npz",
+    "find_max": "False",
     "find_99th": "False",
-    "add_reg_prefix": "True",
+    "add_reg_prefix": "False",
     "del_reg_prefix": "False",
     "pruning": "False",
-    "make_mask": "False",
+    "make_mask": "True",
     "mask_load": null,
     "clustering": "False"
   },
@@ -21,10 +21,10 @@
   },
   "activation": "relu1",
   "regularizer": {
-    "name": "Weighted_Ridge1",
+    "name": "Ridge",
     "lmbd": 0.02,
     "sub_reg": {
-      "relative_lmbd": 0.025,
+      "relative_lmbd": 1.2,
       "fix_max": "True",
       "sub_ratio": [2,3]
     }
@@ -36,7 +36,7 @@
       "fix_max": "True",
       "max_scale": 1.0,
       "is_Lv": "True",
-      "centralized": "False",
+      "centralized": "True",
       "stop_grad": "False",
       "pruning": "False",
       "threshold_bit": "[2,3]"
@@ -46,7 +46,7 @@
     "mulR": "1"
   },
   "optimizer": {
-    "name": "NesterovAG",
+    "name": "SGD",
     "lr": 0.01,
     "lr_schedule": [[0, 0.01], [100, 0.001], [200, 0.0001], [300, 0.00001]],
     "max_epoch": 300

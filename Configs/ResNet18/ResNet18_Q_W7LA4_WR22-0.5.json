@@ -1,11 +1,11 @@
 {
   "model": "ResNet18",
   "dataset": "Cifar100",
-  "logdir": "ResNet18_Q_W7LA4_WR22-1",
+  "logdir": "ResNet18_Q_W7LA4_WR22-0.5",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "pretrn_relu1_resnet18.npz",
+    "name": "pretrn_relu1_mul2r_resnet18.npz",
     "find_max": "True",
     "find_99th": "False",
     "add_reg_prefix": "True",
@@ -43,12 +43,12 @@
     },
     "BITA": 4,
     "BITG": 32,
-    "mulR": "1"
+    "mulR": "2R"
   },
   "optimizer": {
     "name": "NesterovAG",
     "lr": 0.01,
-    "lr_schedule": [[0, 0.1], [101, 0.01], [201, 0.001], [301, 0.0001]],
+    "lr_schedule": [[0, 0.1], [100, 0.01], [200, 0.001], [300, 0.0001]],
     "max_epoch": 300
   }
 }

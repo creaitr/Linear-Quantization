@@ -1,7 +1,7 @@
 {
   "model": "ResNet18",
   "dataset": "Cifar100",
-  "logdir": "ResNet18_Q_W11LA4_WR23-2",
+  "logdir": "ResNet18_Q_W11LA4_WR23-0.5",
   "gpu": "0",
   "save_init": "False",
   "load": {
@@ -24,7 +24,7 @@
     "name": "Weighted_Ridge1",
     "lmbd": 0.0002,
     "sub_reg": {
-      "relative_lmbd": 2.0,
+      "relative_lmbd": 0.5,
       "fix_max": "True",
       "sub_ratio": [2,3]
     }
