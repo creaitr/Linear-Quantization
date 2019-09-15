@@ -1,11 +1,11 @@
 {
   "model": "ResNet18",
   "dataset": "Cifar100",
-  "logdir": "ResNet18_SQ_W7LA4",
+  "logdir": "ResNet18_SQ_W11LA4_WR23-0.25",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "quantized_7l_wr22-1_resnet18.npz",
+    "name": "quantized_11l_wr23-0.25_resnet18.npz",
     "find_max": "False",
     "find_99th": "False",
     "add_reg_prefix": "False",
@@ -24,14 +24,14 @@
     "name": "Ridge",
     "lmbd": 0.0002,
     "sub_reg": {
-      "relative_lmbd": 2.0,
+      "relative_lmbd": 0.25,
       "fix_max": "True",
-      "sub_ratio": [2,2]
+      "sub_ratio": [2,3]
     }
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 7,
+    "BITW": 11,
     "W_opts": {
       "fix_max": "True",
       "max_scale": 1.0,
@@ -39,16 +39,16 @@
       "centralized": "True",
       "stop_grad": "False",
       "pruning": "False",
-      "threshold_bit": "[2,2]"
+      "threshold_bit": "[2,3]"
     },
     "BITA": 4,
     "BITG": 32,
-    "mulR": "1"
+    "mulR": "2R"
   },
   "optimizer": {
     "name": "SGD",
     "lr": 0.1,
-    "lr_schedule": [[0, 0.1], [101, 0.01], [201, 0.001], [301, 0.0001]],
+    "lr_schedule": [[0, 0.1], [100, 0.01], [200, 0.001], [300, 0.0001]],
     "max_epoch": 300
   }
 }
