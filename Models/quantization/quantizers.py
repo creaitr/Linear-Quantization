@@ -105,6 +105,54 @@ def quantize_weight(bitW, name, opts, quantizer_config):
                 return tf.multiply(max_x, x)
             return qw
 
+    # intervals quantization
+    elif name == 'intQ':
+
+        @tf.custom_gradient
+        def qw(x): 
+            if bitW == 32:
+                if quantizer_config['mulR'] in ['2R', 'R']:
+                    if eval(opts['fix_max']):
+                        param_name = x.op.name.split('/W')[0] + '/maxW'
+                        max_x = tf.stop_gradient(tf.get_variable('maxW', initializer=1.0, dtype=tf.float32), name=param_name)
+                        tf.add_to_collection('maxs', max_x)
+                    else:
+                        param_name = x.op.name.split('/W')[0] + '/maxW'
+                        max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)), name=param_name)
+                        tf.add_to_collection('maxs', max_x)
+                    
+                return x
+
+            if eval(opts['fix_max']):
+                #param_name = 'regularize_cost_internals/' + x.op.name.split('/W')[0] + '/maxW'
+                param_name = x.op.name.split('/W')[0] + '/maxW_stop_grad'
+                max_x = tf.stop_gradient(tf.get_variable('maxW', initializer=1.0, dtype=tf.float32), name=param_name)
+            else:
+                param_name = x.op.name.split('/W')[0] + '/maxW_stop_grad'
+                max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)), name=param_name)
+                
+            tf.add_to_collection('maxs', max_x)
+
+            n = (bitW - 1) / 2
+
+            x_abs = tf.abs(x)
+            
+            lower = max_x * 0.05
+            upper = max_x * 0.95
+            
+            x_temp = tf.conf(x_abs < lower, tf.zeros_like(x_abs), tf.clip_by_value(x_abs, lower, upper*0.9999))
+            x_temp = (n / 0.9 * max_x) * x_temp + (0.5 - (0.5 * n / 9))
+            x_temp = tf.round(x_temp)
+
+            x_temp = x_temp / n * upper
+
+            x_temp = x_temp * tf.sign(x)
+            
+            return x_temp, lambda dy: dy
+        return qw
+
+
+
     # 2. Centroid Quantization
     elif name == 'cent':
 
@@ -191,7 +239,41 @@ def quantize_weight(bitW, name, opts, quantizer_config):
         return qw
 
 
-def quantize_activation(bitA):
+def quantize_activation(bitA, name, q_config):
+    if name == 'intQ':
+        @tf.custom_gradient        
+        def qa(x):
+            name = x.op.name
+            ema_name = name + '_ema'
+            
+            c = tf.get_variable(ema_name, initializer=0.0, dtype=tf.float32)
+
+            max_a = tf.max(x)
+
+            temp_c = max_a
+
+            new_c = tf.cond(tf.get_global_step() == 0, temp_c, c * 0.99 + temp_c * 0.01, name=ema_name + '_new')
+
+            #op = tf.assign(c, new_c, use_locking=False).op
+
+            tf.add_to_collection('new_cs', new_c)
+
+            n = 2 ** bitA - 1
+            
+            lower = new_c * 0.05
+            upper = new_c * 0.95
+            
+            x_temp = tf.conf(x < lower, tf.zeros_like(x), tf.clip_by_value(x, lower, upper*0.9999))
+            x_temp = (n / 0.9 * new_c) * x_temp + (0.5 - (0.5 * n / 9))
+            x_temp = tf.round(x_temp)
+
+            x_temp = x_temp / n * upper
+            
+            return x_temp, lambda dy: dy
+
+        return qa
+        
+    
     def qa(x):
         if bitA == 32:
             return x

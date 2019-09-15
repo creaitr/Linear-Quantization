@@ -383,5 +383,4 @@ class Model(ModelDesc):
             callbacks = [InitSaver()]
 
         max_epoch = int(self.optimizer_config['max_epoch'])
-        max_epoch = 105
         return callbacks, max_epoch

@@ -53,7 +53,7 @@ class Model(ModelDesc):
         if self.quantizer_config['BITA'] in ['32', 32]:
             qa = tf.identity
         else:
-            qa = quantize_activation(int(self.quantizer_config['BITA']))
+            qa = quantize_activation(int(self.quantizer_config['BITA']), self.quantizer_config['name'], self.quantizer_config)
         # quantize gradient
         qg = quantize_gradient(int(self.quantizer_config['BITG']))
 
@@ -197,7 +197,7 @@ class Model(ModelDesc):
 
         # regularization
         if self.regularizer_config['name'] not in [None, 'None']:
-            reg_func = getattr(regularizers, self.regularizer_config['name'])().get_func(self.regularizer_config)
+            reg_func = getattr(regularizers, self.regularizer_config['name'])().get_func(self.regularizer_config, self.quantizer_config)
             reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), regularize_cost('.*/W', reg_func), name='reg_cost')
             #reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), regularize_cost_from_collection(), name='reg_cost')
             total_cost = tf.add_n([cost, reg_cost], name='total_cost')
@@ -218,6 +218,38 @@ class Model(ModelDesc):
         return total_cost
 
     def add_centralizing_update(self):
+        if self.quantizer_config['name'] == 'intQ':
+            def func(x):
+                param_name = x.op.name
+                if '/W' in param_name and 'conv1' not in param_name and 'fct' not in param_name:
+                    name_scope, device_scope = x.op.name.split('/W')
+
+                    #inBIT, exBIT = eval(self.quantizer_config['W_opts']['threshold_bit'])
+
+                    esl = int(self.quantizer_config['BITW'])
+                    n = (esl - 1) / 2
+
+                    with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
+                        if eval(self.quantizer_config['W_opts']['fix_max']):
+                            #max_x_name = 'post_op_internals/' + name_scope + '/maxW'
+                            #max_x_name = name_scope + '/maxW'
+                            max_x = tf.stop_gradient(tf.get_variable('maxW', shape=(), initializer=tf.ones_initializer, dtype=tf.float32))
+                            max_x *= float(self.quantizer_config['W_opts']['max_scale'])
+                        else:
+                            max_x = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+
+                        thresh = 0.05 * max_x + (0.9 * max_x / n)
+                        thresh_temp = thresh * 0.999
+
+                        mask_name = name_scope + '/maskW'
+                        mask = tf.get_variable('maskW', shape=x.shape, initializer=tf.zeros_initializer, dtype=tf.float32)
+
+                    new_x = tf.where(tf.equal(1.0, mask), tf.clip_by_value(x, -thresh_temp, thresh_temp), tf.clip_by_value(x, -max_x, max_x))
+                    return tf.assign(x, new_x, use_locking=False).op
+            
+            self.centralizing = func
+            return
+        
         def func(x):
             param_name = x.op.name
             if '/W' in param_name and 'conv1' not in param_name and 'fct' not in param_name:
@@ -328,6 +360,22 @@ class Model(ModelDesc):
 
         self.masking = func
 
+    def add_new_cs_update(self):
+        def func(x):
+            param_name = x.op.name
+            if '_ema' in param_name:
+                n = x.op.name + '_new'
+
+                new_cs = tf.get_collection('new_cs')
+                for tensor in new_cs:
+                    tn = tensor.op.name
+                    if n == tn:
+                        m = tensor
+                        
+                return tf.assign(x, m, use_locking=False).op
+
+        self.ema = func
+
     def optimizer(self):
         opt = get_optimizer(self.optimizer_config)
 
@@ -345,6 +393,9 @@ class Model(ModelDesc):
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['pruning']):
             self.add_masking_update()
             opt = optimizer.PostProcessOptimizer(opt, self.masking)
+        if int(self.quantizer_config['BitA']) != 32:
+            self.add_new_cs_update()
+            opt = optimizer.PostProcessOptimizer(opt, self.ema)
         return opt
 
     def get_callbacks(self, ds_tst):
