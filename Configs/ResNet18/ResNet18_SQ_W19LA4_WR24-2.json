@@ -1,11 +1,11 @@
 {
   "model": "ResNet18",
   "dataset": "Cifar100",
-  "logdir": "ResNet18_SQ_W19LA4_WR24-2.0",
+  "logdir": "ResNet18_SQ_W19LA4_WR24-2",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "quantized_19l_wr24-8_wr24-2.0_resnet18.npz",
+    "name": "quantized_19l_wr24-8_wr24-2_resnet18.npz",
     "find_max": "False",
     "find_99th": "False",
     "add_reg_prefix": "False",
