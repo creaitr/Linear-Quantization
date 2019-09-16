@@ -396,7 +396,7 @@ class Model(ModelDesc):
         if self.quantizer_config['name'] == 'linear' and eval(self.quantizer_config['W_opts']['pruning']):
             self.add_masking_update()
             opt = optimizer.PostProcessOptimizer(opt, self.masking)
-        if int(self.quantizer_config['BitA']) != 32:
+        if int(self.quantizer_config['BITA']) != 32:
             self.add_new_cs_update()
             opt = optimizer.PostProcessOptimizer(opt, self.ema)
         return opt
