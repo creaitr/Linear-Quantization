@@ -105,11 +105,18 @@ class Model(ModelDesc):
                 if 'InferenceTower' in x.op.name:
                     idx = x.op.name.index('/')
                     n = x.op.name[idx+1::]
+                elif 'tower' in x.op.name:
+                    idx = x.op.name.index('/')
+                    n = x.op.name[idx+1::]
                 else:
                     n = x.op.name
                 n0 = n.split('blk')[0]
                 n1 = n0 + 'blk1/shortcut/maxW'
                 n2 = n.split('/output')[0] + '/maxW'
+
+                if int(self.quantizer_config['BITW']) != 32 and eval(self.quantizer_config['W_opts']['fix_max']):
+                    n1 += '_stop_grad'
+                    n2 += '_stop_grad'
 
                 maxs = tf.get_collection('maxs')
                 for tensor in maxs:

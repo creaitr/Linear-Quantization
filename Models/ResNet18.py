@@ -105,6 +105,9 @@ class Model(ModelDesc):
                 if 'InferenceTower' in x.op.name:
                     idx = x.op.name.index('/')
                     n = x.op.name[idx+1::]
+                elif 'tower' in x.op.name:
+                    idx = x.op.name.index('/')
+                    n = x.op.name[idx+1::]
                 else:
                     n = x.op.name
                 n0 = n.split('blk')[0]
