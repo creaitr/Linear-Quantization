@@ -5,7 +5,7 @@
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "quantized_19l_wr24-8_wr24-0.125_resnet18.npz",
+    "name": "quantized_19l_wr24-0.125_resnet18.npz",
     "find_max": "False",
     "find_99th": "False",
     "add_reg_prefix": "False",
