@@ -114,7 +114,7 @@ class Model(ModelDesc):
                 n1 = n0 + 'blk1/shortcut/maxW'
                 n2 = n.split('/output')[0] + '/maxW'
 
-                if int(self.quantizer_config['BITW']) != 32 and eval(self.quantizer_config['W_opts']['fix_max']):
+                if int(self.quantizer_config['BITW']) != 32: # and eval(self.quantizer_config['W_opts']['fix_max']):
                     n1 += '_stop_grad'
                     n2 += '_stop_grad'
                 
