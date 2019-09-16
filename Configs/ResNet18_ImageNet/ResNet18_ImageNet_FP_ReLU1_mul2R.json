@@ -1,7 +1,7 @@
 {
   "model": "ResNet18_ImageNet",
   "dataset": "ImageNet",
-  "logdir": "ResNet18_ImageNet_FP_ReLU1_mulR",
+  "logdir": "ResNet18_ImageNet_FP_ReLU1_mul2R",
   "gpu": "0",
   "save_init": "False",
   "load": {
@@ -43,7 +43,7 @@
     },
     "BITA": 32,
     "BITG": 32,
-    "mulR": "R"
+    "mulR": "2R"
   },
   "optimizer": {
     "name": "NesterovAG",
