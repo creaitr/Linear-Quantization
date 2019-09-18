@@ -53,7 +53,7 @@ class Model(ModelDesc):
         if self.quantizer_config['BITA'] in ['32', 32]:
             qa = tf.identity
         else:
-            qa = quantize_activation(int(self.quantizer_config['BITA']))
+            qa = quantize_activation(int(self.quantizer_config['BITA']), self.quantizer_config['name'], self.quantizer_config)
         # quantize gradient
         qg = quantize_gradient(int(self.quantizer_config['BITG']))
 
