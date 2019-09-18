@@ -201,7 +201,7 @@ class Model(ModelDesc):
 
         # regularization
         if self.regularizer_config['name'] not in [None, 'None']:
-            reg_func = getattr(regularizers, self.regularizer_config['name'])().get_func(self.regularizer_config)
+            reg_func = getattr(regularizers, self.regularizer_config['name'])().get_func(self.regularizer_config, self.quantizer_config)
             reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), regularize_cost('.*/W', reg_func), name='reg_cost')
             total_cost = tf.add_n([cost, reg_cost], name='total_cost')
         else:
