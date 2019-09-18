@@ -29,7 +29,7 @@ else:
     l1_regularizer = tf.keras.regularizers.l1
 
 
-def custom_regularize_cost(regex, func, name='regularize_cost'):
+def custom_regularize_cost(regex, func, name='ridge'):
     """
     Apply a regularizer on trainable variables matching the regex, and print
     the matched variables (only print once in multi-tower training).
@@ -66,7 +66,19 @@ def custom_regularize_cost(regex, func, name='regularize_cost'):
     for p in params:
         para_name = p.op.name
         if re.search(regex, para_name):
-            regloss = func(p)
+            if name == 'Weighted_Ridge1':
+                device_scope = p.op.name.split('/W')[0]
+                param_name = device_scope + '/maxW'
+
+                temp_max = None
+                for tensor in params:
+                    tn = tensor.op.name
+                    if param_name == tn:
+                        temp_max = tensor                
+                
+                regloss = func(p, temp_max)
+            else:
+                regloss = func(p)            
             assert regloss.dtype.is_floating, regloss
             # Some variables may not be fp32, but it should
             # be fine to assume regularization in fp32
