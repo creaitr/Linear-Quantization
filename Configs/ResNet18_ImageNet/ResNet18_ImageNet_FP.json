@@ -46,7 +46,7 @@
     "mulR": "1"
   },
   "optimizer": {
-    "name": "NesterovAG",
+    "name": "Momentum",
     "lr": 0.1,
     "lr_schedule": [[0, 0.1], [25, 0.01], [50, 0.001], [75, 0.0001], [80, 0.00001], [85, 0.000001]],
     "max_epoch": 85

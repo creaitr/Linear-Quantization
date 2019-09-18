@@ -5,7 +5,7 @@
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "init_resnet18_imagenet.npz",
+    "name": "pretrn_resnet18_imagenet.npz",
     "find_max": "False",
     "find_99th": "False",
     "add_reg_prefix": "False",
@@ -46,7 +46,7 @@
     "mulR": "2R"
   },
   "optimizer": {
-    "name": "NesterovAG",
+    "name": "Momentum",
     "lr": 0.1,
     "lr_schedule": [[0, 0.1], [25, 0.01], [50, 0.001], [75, 0.0001], [80, 0.00001], [85, 0.000001]],
     "max_epoch": 85

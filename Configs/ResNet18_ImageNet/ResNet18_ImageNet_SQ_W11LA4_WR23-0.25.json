@@ -1,17 +1,17 @@
 {
   "model": "ResNet18_ImageNet",
   "dataset": "ImageNet",
-  "logdir": "ResNet18_ImageNet_FP_mul2R",
+  "logdir": "ResNet18_ImageNet_SQ_W11LA4_WR23-0.25",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "init_resnet18_imagenet.npz",
+    "name": "quantized_11l_wr23-0.25_resnet18_imagenet.npz",
     "find_max": "False",
     "find_99th": "False",
     "add_reg_prefix": "False",
     "del_reg_prefix": "False",
     "pruning": "False",
-    "make_mask": "False",
+    "make_mask": "True",
     "mask_load": null,
     "clustering": "False"
   },
@@ -19,34 +19,34 @@
     "scale": 2.0,
     "mode": "fan_in"
   },
-  "activation": "relu",
+  "activation": "relu1",
   "regularizer": {
     "name": "Ridge",
     "lmbd": 0.0002,
     "sub_reg": {
-      "relative_lmbd": 2.0,
+      "relative_lmbd": 0.25,
       "fix_max": "True",
       "sub_ratio": [2,3]
     }
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 32,
+    "BITW": 11,
     "W_opts": {
-      "fix_max": "False",
+      "fix_max": "True",
       "max_scale": 1.0,
       "is_Lv": "True",
-      "centralized": "False",
+      "centralized": "True",
       "stop_grad": "False",
       "pruning": "False",
       "threshold_bit": "[2,3]"
     },
-    "BITA": 32,
+    "BITA": 4,
     "BITG": 32,
     "mulR": "2R"
   },
   "optimizer": {
-    "name": "Momentum",
+    "name": "SGD",
     "lr": 0.1,
     "lr_schedule": [[0, 0.1], [25, 0.01], [50, 0.001], [75, 0.0001], [80, 0.00001], [85, 0.000001]],
     "max_epoch": 85
