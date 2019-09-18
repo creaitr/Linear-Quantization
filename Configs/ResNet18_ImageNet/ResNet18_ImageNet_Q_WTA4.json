@@ -1,0 +1,54 @@
+{
+  "model": "ResNet18_ImageNet",
+  "dataset": "ImageNet",
+  "logdir": "ResNet18_ImageNet_Q_WTA4",
+  "gpu": "0",
+  "save_init": "False",
+  "load": {
+    "name": "pretrn_relu1_mul2r_resnet18_imagenet.npz",
+    "find_max": "False",
+    "find_99th": "False",
+    "add_reg_prefix": "False",
+    "del_reg_prefix": "False",
+    "pruning": "False",
+    "make_mask": "False",
+    "mask_load": null,
+    "clustering": "False"
+  },
+  "initializer": {
+    "scale": 2.0,
+    "mode": "fan_in"
+  },
+  "activation": "relu1",
+  "regularizer": {
+    "name": "Ridge",
+    "lmbd": 0.0002,
+    "sub_reg": {
+      "relative_lmbd": 2.0,
+      "fix_max": "True",
+      "sub_ratio": [2,3]
+    }
+  },
+  "quantizer": {
+    "name": "linear",
+    "BITW": 3,
+    "W_opts": {
+      "fix_max": "False",
+      "max_scale": 1.0,
+      "is_Lv": "True",
+      "centralized": "False",
+      "stop_grad": "False",
+      "pruning": "False",
+      "threshold_bit": "[2,3]"
+    },
+    "BITA": 4,
+    "BITG": 32,
+    "mulR": "2R"
+  },
+  "optimizer": {
+    "name": "Momentum",
+    "lr": 0.1,
+    "lr_schedule": [[0, 0.1], [25, 0.01], [50, 0.001], [75, 0.0001], [80, 0.00001], [85, 0.000001]],
+    "max_epoch": 85
+  }
+}
