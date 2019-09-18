@@ -30,7 +30,7 @@ class Weighted_Ridge1():
             def func(x=None, temp_max=None):
                 if 'conv1' not in x.op.name and 'fct' not in x.op.name:
                     if temp_max != None:
-                        maxW = temp_max
+                        maxW = tf.stop_gradient(temp_max)
                     elif fix_max:
                         param_name = x.op.name.split('/W')[0] + '/maxW'
                         maxW = tf.stop_gradient(tf.Variable(1.0, name=param_name))
@@ -62,7 +62,7 @@ class Weighted_Ridge1():
         def func(x=None, temp_max=None):
             if 'conv1' not in x.op.name and 'fct' not in x.op.name:
                 if temp_max != None:
-                    maxW = temp_max
+                    maxW = tf.stop_gradient(temp_max)
                 elif fix_max:
                     param_name = x.op.name.split('/W')[0] + '/maxW'
                     maxW = tf.stop_gradient(tf.Variable(1.0, name=param_name))
