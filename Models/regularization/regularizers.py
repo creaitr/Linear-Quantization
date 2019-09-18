@@ -29,11 +29,18 @@ class Weighted_Ridge1():
 
             def func(x):
                 if 'conv1' not in x.op.name and 'fct' not in x.op.name:
-                    if fix_max:
-                        param_name = x.op.name.split('/W')[0] + '/maxW'
-                        maxW = tf.stop_gradient(tf.Variable(1.0, name=param_name))
-                    else:
-                        maxW = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
+                    device_scope = x.op.name.split('/W')[0]
+                    param_name = device_scope + '/maxW'
+
+                    with tf.variable_scope(name_scope, reuse=tf.AUTO_REUSE):
+                        if fix_max:
+                            #param_name = x.op.name.split('/W')[0] + '/maxW'
+                            #maxW = tf.stop_gradient(tf.Variable(1.0, name=param_name))
+                            maxW = tf.stop_gradient(tf.get_variable('maxW', shape=(), initializer=tf.ones_initializer, dtype=tf.float32))
+                        else:
+                            print('recommend to fix max, the range of weights...')
+                            exit()
+                            maxW = tf.stop_gradient(tf.reduce_max(tf.abs(x)))
 
                         
                     threshold = 0.05 * maxW + (0.9 * maxW / n)

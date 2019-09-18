@@ -20,6 +20,7 @@ from tensorpack.tfutils.common import get_global_step_var
 
 # custom
 from .regularization import regularizers
+from .regularization.custom import custom_regularize_cost
 from .optimization.optimizers import get_optimizer
 from .activation.activation_funcs import get_activation_func
 from .quantization.quantizers import quantize_weight, quantize_activation, quantize_gradient
@@ -202,7 +203,7 @@ class Model(ModelDesc):
         # regularization
         if self.regularizer_config['name'] not in [None, 'None']:
             reg_func = getattr(regularizers, self.regularizer_config['name'])().get_func(self.regularizer_config, self.quantizer_config)
-            reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), regularize_cost('.*/W', reg_func), name='reg_cost')
+            reg_cost = tf.multiply(float(self.regularizer_config['lmbd']), custom_regularize_cost('.*/W', reg_func), name='reg_cost')
             total_cost = tf.add_n([cost, reg_cost], name='total_cost')
         else:
             total_cost = cost

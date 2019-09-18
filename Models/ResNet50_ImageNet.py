@@ -20,6 +20,7 @@ from tensorpack.tfutils.common import get_global_step_var
 
 # custom
 from .regularization import regularizers
+from .regularization.custom import custom_regularize_cost
 from .optimization.optimizers import get_optimizer
 from .activation.activation_funcs import get_activation_func
 from .quantization.quantizers import quantize_weight, quantize_activation, quantize_gradient
