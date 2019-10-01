@@ -112,6 +112,8 @@ class Model(ModelDesc):
             return x
 
         def block(x, channel, kernel_size, stride, extension, SE):
+            channel_mismatch = channel != x.get_shape().as_list()[3]
+            
             shortcut = x
 
             x = Conv2D('pwconv_a', x, channel * extension, 1, strides=(1, 1))
@@ -128,10 +130,7 @@ class Model(ModelDesc):
             x = Conv2D('pwconv_c', x, channel, 1, strides=(1, 1))
             x = BatchNorm('bn_c', x)
 
-            channel_mismatch = channel != x.get_shape().as_list()[3]
             if stride == 1 or channel_mismatch:
-                print(channel)
-                print(x.get_shape().as_list()[3])
                 x = x + shortcut
             return x
         
