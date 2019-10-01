@@ -75,7 +75,8 @@ class Model(ModelDesc):
             #output = tf.keras.layers.DepthwiseConv2D(kernel_size, strides=(stride,stride), padding='same', use_bias=False)(inputs)
             #print(output.name, ': ', inputs.shape, ' --> ', output.shape)
             #return output
-            var = tf.get_variable(name='dwconv_kernel', shape=[kernel_size,kernel_size,channel,1], initializer=tf.glorot_uniform_initializer)
+            curr_channel = inputs.get_shape[3]
+            var = tf.get_variable(name='dwconv_kernel', shape=[kernel_size,kernel_size,curr_channel,1], initializer=tf.glorot_uniform_initializer)
             return tf.nn.depthwise_conv2d(inputs, var, strides=(1,stride, stride,1), padding=padding)
         
         @layer_register(use_scope=True)
