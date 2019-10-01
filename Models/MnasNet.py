@@ -76,7 +76,7 @@ class Model(ModelDesc):
             #print(output.name, ': ', inputs.shape, ' --> ', output.shape)
             #return output
             var = tf.get_variable(name='dwconv_kernel', shape=[kernel_size,kernel_size,channel,1], initializer=tf.glorot_uniform_initializer)
-            return tf.nn.depthwise_conv2d(inputs, var, strides=[stride, stride], padding, data_format, dilations)
+            return tf.nn.depthwise_conv2d(inputs, var, strides=[stride, stride], padding)
         
         @layer_register(use_scope=True)
         def SE_block(input_feature, ratio=8):
