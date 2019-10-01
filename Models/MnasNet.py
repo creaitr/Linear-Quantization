@@ -72,8 +72,11 @@ class Model(ModelDesc):
 
         @layer_register(use_scope=True)
         def DWConv2D(inputs, channel, kernel_size=3, stride=1, padding='SAME', data_format=None, dilations=None):
-            #return tf.nn.depthwise_conv2d(inputs, [kernel_size,kernel_size,channel,1], strides=[stride, stride], padding, data_format, dilations)
-            return tf.keras.layers.DepthwiseConv2D(kernel_size, strides=(stride,stride), padding='same', use_bias=False)(inputs)
+            #output = tf.keras.layers.DepthwiseConv2D(kernel_size, strides=(stride,stride), padding='same', use_bias=False)(inputs)
+            #print(output.name, ': ', inputs.shape, ' --> ', output.shape)
+            #return output
+            var = tf.get_variable(name='dwconv_kernel', shape=[kernel_size,kernel_size,channel,1], initializer=tf.glorot_uniform_initializer)
+            return tf.nn.depthwise_conv2d(inputs, var, strides=[stride, stride], padding, data_format, dilations)
         
         @layer_register(use_scope=True)
         def SE_block(input_feature, ratio=8):
@@ -120,8 +123,9 @@ class Model(ModelDesc):
 
             x = Conv2D('pwconv_c', x, channel, 1, strides=(1, 1))
             x = BatchNorm('bn_c', x)
-            
-            if stride == 1:
+
+            channel_mismatch = channel != x.get_shape().as_list()[3]
+            if stride == 1 or channel_mismatch:
                 x = x + shortcut
             return x
         
