@@ -77,7 +77,10 @@ class Model(ModelDesc):
             #return output
             curr_channel = inputs.get_shape().as_list()[3]
             var = tf.get_variable(name='dwconv_kernel', shape=[kernel_size,kernel_size,curr_channel,1], initializer=tf.glorot_uniform_initializer)
-            return tf.nn.depthwise_conv2d(inputs, var, strides=(1,stride, stride,1), padding=padding)
+
+            output = tf.nn.depthwise_conv2d(inputs, var, strides=(1,stride, stride,1), padding=padding)
+            print(output.name, ': ', inputs.shape, ' --> ', output.shape)
+            return output
         
         @layer_register(use_scope=True)
         def SE_block(input_feature, ratio=8):
@@ -127,6 +130,8 @@ class Model(ModelDesc):
 
             channel_mismatch = channel != x.get_shape().as_list()[3]
             if stride == 1 or channel_mismatch:
+                print(channel)
+                print(x.get_shape().as_list()[3])
                 x = x + shortcut
             return x
         
