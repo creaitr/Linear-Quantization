@@ -72,7 +72,8 @@ class Model(ModelDesc):
 
         @layer_register(use_scope=True)
         def DWConv2D(inputs, channel, kernel_size=3, stride=1, padding='SAME', data_format=None, dilations=None):
-            return tf.nn.depthwise_conv2d(inputs, [kernel_size,kernel_size,channel,1], strides=[stride, stride], padding, data_format, dilations)
+            #return tf.nn.depthwise_conv2d(inputs, [kernel_size,kernel_size,channel,1], strides=[stride, stride], padding, data_format, dilations)
+            return tf.keras.layers.DepthwiseConv2D(kernel_size, strides=(stride,stride), padding='same', use_bias=False)
         
         @layer_register(use_scope=True)
         def SE_block(input_feature, ratio=8):
