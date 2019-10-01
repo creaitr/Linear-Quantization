@@ -131,8 +131,8 @@ class Model(ModelDesc):
             if SE:
                 x = SE_block('se_block', x)
 
-            x = Conv2D('pwconv_c', x, channel//4, 1, strides=(1, 1))
-            x = Conv2D('pwconv_c', x, channel, 1, strides=(1, 1))
+            x = Conv2D('pwconv_c1', x, channel//4, 1, strides=(1, 1))
+            x = Conv2D('pwconv_c2', x, channel, 1, strides=(1, 1))
             x = BatchNorm('bn_c', x)
 
             if stride == 1 and channel_match:
