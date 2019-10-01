@@ -10,3 +10,4 @@ from .ResNet50_ImageNet import Model as ResNet50_ImageNet
 
 
 from .MnasNet import Model as MnasNet
+from .MnasNet_conv11 import Model as MnasNet_conv11
