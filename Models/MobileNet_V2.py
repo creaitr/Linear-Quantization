@@ -116,11 +116,7 @@ class Model(ModelDesc):
             
             shortcut = x
 
-            if not channel_match:
-                x = Conv2D('pwconv_a', x, channel * extension, 1, strides=(1, 1))
-            else:
-                x = Conv2D('pwconv_a1', x, 20, 1, strides=(1, 1))
-                x = Conv2D('pwconv_a2', x, channel * extension, 1, strides=(1, 1))
+            x = Conv2D('pwconv_a', x, channel * extension, 1, strides=(1, 1))
             x = BatchNorm('bn_a', x)
             x = activate(x)
 
@@ -131,8 +127,7 @@ class Model(ModelDesc):
             if SE:
                 x = SE_block('se_block', x)
 
-            x = Conv2D('pwconv_c1', x, 20, 1, strides=(1, 1))
-            x = Conv2D('pwconv_c2', x, channel, 1, strides=(1, 1))
+            x = Conv2D('pwconv_c', x, channel, 1, strides=(1, 1))
             x = BatchNorm('bn_c', x)
 
             if stride == 1 and channel_match:
@@ -148,19 +143,22 @@ class Model(ModelDesc):
             return x
 
         with remap_variables(new_get_variable), \
-                argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
+                #argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
                 argscope(Conv2D, use_bias=False, nl=tf.identity,
                          kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['scale']),
                                                                             mode=self.initializer_config['mode'])):
             logits = (LinearWrap(image)
                       .Conv2D('conv1', 32, 3)   # size=32
-                      .apply(SepConv, 'sepconv2', 1, 16, 3, 1)  # size=32
-                      .apply(group, 'mbconv3', 2, 24, 3, 2, 6, False)  # size=16
-                      .apply(group, 'mbconv4', 3, 40, 5, 2, 3, True)  # size=8
-                      .apply(group, 'mbconv5', 4, 80, 3, 2, 6, False)  # size=4
-                      .apply(group, 'mbconv6', 2, 112, 3, 1, 6, True)  # size=4
-                      .apply(group, 'mbconv7', 3, 160, 5, 2, 6, True)  # size=2
+                      .apply(group, 'mbconv2', 1, 16, 3, 1, 6, False)  # size=32
+                      .apply(group, 'mbconv3', 2, 24, 3, 1, 6, False)  # size=16
+                      .apply(group, 'mbconv4', 3, 32, 3, 2, 6, False)  # size=8
+                      .apply(group, 'mbconv5', 4, 64, 3, 2, 6, False)  # size=4
+                      .apply(group, 'mbconv6', 3, 96, 3, 1, 6, False)  # size=4
+                      .apply(group, 'mbconv7', 3, 160, 3, 2, 6, False)  # size=2
                       .apply(group, 'mbconv8', 1, 320, 3, 1, 6, False)  # size=2
+                      .Conv2D('conv9', x, 1280, 1, strides=(1, 1))
+                      .BatchNorm('last_bn')
+                      .apply(activate)
                       .GlobalAvgPooling('gap')
                       .FullyConnected('fct', self.nb_classes)())
         prob = tf.nn.softmax(logits, name='output')
@@ -390,8 +388,8 @@ class Model(ModelDesc):
             else:
                 callbacks += [ScheduledHyperParamSetter('learning_rate', self.optimizer_config['lr_schedule'])]
         else:
-            callbacks += [ScheduledHyperParamSetter('learning_rate',
-                                      [(1, 0.1), (82, 0.01), (123, 0.001), (300, 0.0002)])]
+            callbacks += [HyperParamSetterWithFunc('learning_rate',
+                                    lambda e, x: x * 0.99 if e % 1 == 0 else x)]
 
         if eval(self.config['save_init']):
             callbacks = [InitSaver()]

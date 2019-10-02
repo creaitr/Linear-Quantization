@@ -12,4 +12,6 @@ def get_optimizer(config):
         opt = tf.train.MomentumOptimizer(lr, 0.9, use_nesterov=True)
     elif config['name'] == 'Adam':
         opt = tf.train.AdamOptimizer(lr)
+    elif config['name'] == 'RMSProp':
+        opt = tf.train.RMSPropOptimizer(lr, decay=0.9, momentum=0.9)
     return opt
