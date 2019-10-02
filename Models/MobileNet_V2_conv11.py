@@ -161,8 +161,8 @@ class Model(ModelDesc):
                       .apply(group, 'mbconv6', 3, 96, 3, 1, 6, False)  # size=4
                       .apply(group, 'mbconv7', 3, 160, 3, 2, 6, False)  # size=2
                       .apply(group, 'mbconv8', 1, 320, 3, 1, 6, False)  # size=2
-                      .Conv2D('conv9_a', x, 20, 1, strides=(1, 1))
-                      .Conv2D('conv9_b', x, 1280, 1, strides=(1, 1))
+                      .Conv2D('conv9_a', 20, 1, strides=(1, 1))
+                      .Conv2D('conv9_b', 1280, 1, strides=(1, 1))
                       .BatchNorm('last_bn')
                       .apply(activate)
                       .GlobalAvgPooling('gap')
