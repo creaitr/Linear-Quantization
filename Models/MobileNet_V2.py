@@ -143,7 +143,7 @@ class Model(ModelDesc):
             return x
 
         with remap_variables(new_get_variable), \
-                #argscope(BatchNorm, decay=0.9, epsilon=1e-4), \
+                argscope(BatchNorm, decay=0.99, epsilon=1e-3), \
                 argscope(Conv2D, use_bias=False, nl=tf.identity,
                          kernel_initializer=tf.variance_scaling_initializer(scale=float(self.initializer_config['scale']),
                                                                             mode=self.initializer_config['mode'])):
