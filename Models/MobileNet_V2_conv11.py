@@ -116,7 +116,7 @@ class Model(ModelDesc):
             
             shortcut = x
 
-            if not channel_match:
+            if x.get_shape().as_list()[3] < 20:
                 x = Conv2D('pwconv_a', x, channel * extension, 1, strides=(1, 1))
             else:
                 x = Conv2D('pwconv_a1', x, 20, 1, strides=(1, 1))
@@ -131,8 +131,11 @@ class Model(ModelDesc):
             if SE:
                 x = SE_block('se_block', x)
 
-            x = Conv2D('pwconv_c1', x, 20, 1, strides=(1, 1))
-            x = Conv2D('pwconv_c2', x, channel, 1, strides=(1, 1))
+            if channel < 20:
+                x = Conv2D('pwconv_c', x, channel, 1, strides=(1, 1))
+            else:
+                x = Conv2D('pwconv_c1', x, 20, 1, strides=(1, 1))
+                x = Conv2D('pwconv_c2', x, channel, 1, strides=(1, 1))
             x = BatchNorm('bn_c', x)
 
             if stride == 1 and channel_match:
@@ -161,8 +164,8 @@ class Model(ModelDesc):
                       .apply(group, 'mbconv6', 3, 96, 3, 1, 6, False)  # size=4
                       .apply(group, 'mbconv7', 3, 160, 3, 2, 6, False)  # size=2
                       .apply(group, 'mbconv8', 1, 320, 3, 1, 6, False)  # size=2
-                      .Conv2D('conv9_a', 20, 1, strides=(1, 1))
-                      .Conv2D('conv9_b', 1280, 1, strides=(1, 1))
+                      .Conv2D('conv9/pwconv_a1', 20, 1, strides=(1, 1))
+                      .Conv2D('conv9/pwconv_a2', 1280, 1, strides=(1, 1))
                       .BatchNorm('last_bn')
                       .apply(activate)
                       .GlobalAvgPooling('gap')
