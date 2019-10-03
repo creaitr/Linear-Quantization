@@ -13,7 +13,7 @@ if __name__ == '__main__':
 
     ls = dict(np.load(f))
 
-    pw_keys = [x for le.keys() if 'pwconv' in x]
+    pw_keys = [x for x in ls.keys() if 'pwconv' in x]
 
     for key in pw_keys:
         shape = ls[key].shape
