@@ -1,14 +1,14 @@
 {
   "model": "ResNet18_ImageNet",
   "dataset": "ImageNet",
-  "logdir": "ResNet18_ImageNet_Q_W11LA4",
+  "logdir": "ResNet18_ImageNet_FP_WR23-1",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "pretrn_relu1_mul2r_resnet18_imagenet.npz",
+    "name": "pretrn_resnet18_imagenet.npz",
     "find_max": "True",
     "find_99th": "False",
-    "add_reg_prefix": "False",
+    "add_reg_prefix": "True",
     "del_reg_prefix": "False",
     "pruning": "False",
     "make_mask": "False",
@@ -19,9 +19,9 @@
     "scale": 2.0,
     "mode": "fan_in"
   },
-  "activation": "relu1",
+  "activation": "relu",
   "regularizer": {
-    "name": "Ridge",
+    "name": "Weighted_Ridge1",
     "lmbd": 0.0002,
     "sub_reg": {
       "relative_lmbd": 1.0,
@@ -31,7 +31,7 @@
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 11,
+    "BITW": 32,
     "W_opts": {
       "fix_max": "True",
       "max_scale": 1.0,
@@ -41,9 +41,9 @@
       "pruning": "False",
       "threshold_bit": "[2,3]"
     },
-    "BITA": 4,
+    "BITA": 32,
     "BITG": 32,
-    "mulR": "2R"
+    "mulR": "1"
   },
   "optimizer": {
     "name": "Momentum",

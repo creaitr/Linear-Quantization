@@ -202,15 +202,15 @@ if __name__ == '__main__':
         sma1 = eval(best['sma_error_top1'])
         sma5 = eval(best['sma_error_top5'])
 
-        best['sma_accuracy_top1'] = 100.0 - sma1
-        best['sma_accuracy_top5'] = 100.0 - sma5
+        best['sma_accuracy_top1'] = 1.0 - sma1
+        best['sma_accuracy_top5'] = 1.0 - sma5
 
         ####
         val1 = best['validation_error_top1']
         val5 = best['validation_error_top5']
 
-        best['validation_accuracy_top1'] = 100.0 - val1
-        best['validation_accuracy_top5'] = 100.0 - val5
+        best['validation_accuracy_top1'] = 1.0 - val1
+        best['validation_accuracy_top5'] = 1.0 - val5
 
         ####
         in_b, ex_b = eval(config['quantizer']['W_opts']['threshold_bit'])

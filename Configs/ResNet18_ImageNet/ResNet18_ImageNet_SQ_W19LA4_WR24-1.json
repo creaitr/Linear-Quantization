@@ -1,17 +1,17 @@
 {
   "model": "ResNet18_ImageNet",
   "dataset": "ImageNet",
-  "logdir": "ResNet18_ImageNet_Q_W11LA4",
+  "logdir": "ResNet18_ImageNet_SQ_W19LA4_WR24-1",
   "gpu": "0",
   "save_init": "False",
   "load": {
-    "name": "pretrn_relu1_mul2r_resnet18_imagenet.npz",
-    "find_max": "True",
+    "name": "quantized_19l_wr24-1_resnet18_imagenet.npz",
+    "find_max": "False",
     "find_99th": "False",
     "add_reg_prefix": "False",
     "del_reg_prefix": "False",
     "pruning": "False",
-    "make_mask": "False",
+    "make_mask": "True",
     "mask_load": null,
     "clustering": "False"
   },
@@ -26,27 +26,27 @@
     "sub_reg": {
       "relative_lmbd": 1.0,
       "fix_max": "True",
-      "sub_ratio": [2,3]
+      "sub_ratio": [2,4]
     }
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 11,
+    "BITW": 19,
     "W_opts": {
       "fix_max": "True",
       "max_scale": 1.0,
       "is_Lv": "True",
-      "centralized": "False",
+      "centralized": "True",
       "stop_grad": "False",
       "pruning": "False",
-      "threshold_bit": "[2,3]"
+      "threshold_bit": "[2,4]"
     },
     "BITA": 4,
     "BITG": 32,
     "mulR": "2R"
   },
   "optimizer": {
-    "name": "Momentum",
+    "name": "SGD",
     "lr": 0.1,
     "lr_schedule": [[0, 0.1], [25, 0.01], [50, 0.001], [75, 0.0001], [80, 0.00001], [85, 0.000001]],
     "max_epoch": 85

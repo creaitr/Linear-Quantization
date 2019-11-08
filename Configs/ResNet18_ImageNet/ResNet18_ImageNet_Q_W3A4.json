@@ -1,7 +1,7 @@
 {
   "model": "ResNet18_ImageNet",
   "dataset": "ImageNet",
-  "logdir": "ResNet18_ImageNet_Q_W11LA4",
+  "logdir": "ResNet18_ImageNet_Q_W3A4",
   "gpu": "0",
   "save_init": "False",
   "load": {
@@ -24,14 +24,14 @@
     "name": "Ridge",
     "lmbd": 0.0002,
     "sub_reg": {
-      "relative_lmbd": 1.0,
+      "relative_lmbd": 2.0,
       "fix_max": "True",
       "sub_ratio": [2,3]
     }
   },
   "quantizer": {
     "name": "linear",
-    "BITW": 11,
+    "BITW": 3,
     "W_opts": {
       "fix_max": "True",
       "max_scale": 1.0,
